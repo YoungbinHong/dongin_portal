@@ -349,23 +349,7 @@
             <div class="logo-sub">SECURE</div>
         </div>
 
-        <div class="sidebar-section">
-            <div class="sidebar-title">즐겨찾기</div>
-            <div class="nav-item" onclick="changeFolder(this, 'OneDrive')"><i>☁️</i>OneDrive</div>
-            <div class="nav-item active" onclick="changeFolder(this, '바탕 화면')"><i>🖥️</i>바탕 화면</div>
-            <div class="nav-item" onclick="changeFolder(this, '다운로드')"><i>📥</i>다운로드</div>
-            <div class="nav-item" onclick="changeFolder(this, '문서')"><i>📄</i>문서</div>
-            <div class="nav-item" onclick="changeFolder(this, '사진')"><i>🖼️</i>사진</div>
-            <div class="nav-item" onclick="changeFolder(this, '동영상')"><i>🎬</i>동영상</div>
-            <div class="nav-item" onclick="changeFolder(this, '음악')"><i>🎵</i>음악</div>
-        </div>
-
-        <div class="sidebar-section">
-            <div class="sidebar-title">내 PC</div>
-            <div class="nav-item" onclick="changeFolder(this, '내 PC')"><i>💻</i>내 PC</div>
-            <div class="nav-item" style="padding-left: 30px; font-size: 13px;"
-                onclick="changeFolder(this, '로컬 디스크 (C:)')"><i>💽</i>로컬 디스크 (C:)</div>
-        </div>
+        <div id="sidebarMenu" style="flex: 1; overflow-y: auto;"></div>
 
         <div class="sidebar-footer">
             <div class="footer-icon" onclick="openSettings()" title="설정">
@@ -390,27 +374,8 @@
         </header>
 
         <div class="file-zone">
-            <div class="file-grid">
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('업무자료_최종.pdf')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">📕</div>
-                    <div style="font-size: 14px; font-weight: 600;">업무자료_최종.pdf</div>
-                </div>
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('2026_예산안.xlsx')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">📗</div>
-                    <div style="font-size: 14px; font-weight: 600;">2026_예산안.xlsx</div>
-                </div>
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('영수증_스캔.png')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">🖼️</div>
-                    <div style="font-size: 14px; font-weight: 600;">영수증_스캔.png</div>
-                </div>
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('비밀번호_메모.txt')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">📝</div>
-                    <div style="font-size: 14px; font-weight: 600;">비밀번호_메모.txt</div>
-                </div>
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('프로젝트_기획서.docx')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">📘</div>
-                    <div style="font-size: 14px; font-weight: 600;">프로젝트_기획서.docx</div>
-                </div>
+            <div class="file-grid" id="fileGrid">
+
             </div>
         </div>
 
@@ -532,225 +497,240 @@
     </div>
 
     <script>
-        /* --- 변수 설정 및 상태 관리 --- */
-        let isCanceled = false;
+        /* --- 필수 모듈 가져오기 --- */
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
 
-        /* --- UI 업데이트 핸들러 --- */
-        function updateBar() {
-            const selectedFiles = document.querySelectorAll('.file-card.selected');
-            const count = selectedFiles.length;
-            const actionBar = document.getElementById('actionBar');
-            const executeBtn = document.getElementById('executeBtn');
+// 암호화 키 설정
+const ALGORITHM = 'aes-256-cbc'; 
+const SECRET_KEY = crypto.scryptSync('dongin-password', 'salt', 32);
+const IV = Buffer.alloc(16, 0);
 
-            if (count > 0) {
-                actionBar.classList.add('show');
-                document.getElementById('count').innerText = count;
+// 기본 경로: 바탕화면
+let currentPath = path.join(os.homedir(), 'Desktop');
 
-                const hasEncrypted = Array.from(selectedFiles).some(card =>
-                    card.querySelector('div:last-child').innerText.toLowerCase().endsWith('.dongin')
-                );
+/* --- 1. 프로그램 시작 시 실행되는 곳 (여기가 문제였습니다) --- */
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("프로그램 시작됨");
+    initSidebar();           // 1. 사이드바 그려라! (이게 빠져있었습니다)
+    loadRealFiles(currentPath); // 2. 파일 목록 가져와라!
+});
 
-                executeBtn.innerText = hasEncrypted ? "복구 실행" : "암호화 실행";
-            } else {
-                actionBar.classList.remove('show');
-            }
-        }
+/* --- 2. 사이드바 자동 생성 함수 (디자인 복구) --- */
+function initSidebar() {
+    const sidebar = document.getElementById('sidebarMenu');
+    if (!sidebar) {
+        console.error("에러: sidebarMenu라는 ID를 가진 태그를 못 찾겠습니다.");
+        return;
+    }
 
-        function toggleSelect(element) {
-            // 1. 현재 클릭한 파일이 암호화된 파일(.dongin)인지 확인
-            const currentName = element.querySelector('div:last-child').innerText.toLowerCase();
-            const isTargetEncrypted = currentName.endsWith('.dongin');
+    const home = os.homedir();
+    sidebar.innerHTML = ''; // 초기화
 
-            // 2. 이미 선택된 모든 파일들을 검사하여 충돌되는 파일 해제
-            const selectedFiles = document.querySelectorAll('.file-card.selected');
-
-            selectedFiles.forEach(file => {
-                const fileName = file.querySelector('div:last-child').innerText.toLowerCase();
-                const isFileEncrypted = fileName.endsWith('.dongin');
-
-                // 클릭한 것과 성격이 다르면(암호화 vs 일반) 기존 선택을 해제
-                if (isTargetEncrypted !== isFileEncrypted) {
-                    file.classList.remove('selected');
+    // OneDrive 폴더들 자동 검색 (실제 사용 중인 폴더만)
+    const oneDriveFolders = [];
+    try {
+        const homeFiles = fs.readdirSync(home);
+        homeFiles.forEach(fileName => {
+            // "OneDrive"로 시작하지만, 정확히 "OneDrive"만 있는 경우는 제외 (회사/학교 OneDrive만 추가)
+            if (fileName.startsWith('OneDrive') && fileName !== 'OneDrive') {
+                const fullPath = path.join(home, fileName);
+                try {
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        // 폴더가 실제로 접근 가능한지 확인
+                        fs.accessSync(fullPath, fs.constants.R_OK);
+                        oneDriveFolders.push({ name: fileName, path: fullPath, icon: '☁️' });
+                    }
+                } catch (accessErr) {
+                    console.log(`OneDrive 폴더 접근 불가: ${fileName}`);
                 }
-            });
+            }
+        });
+    } catch (err) {
+        console.error('OneDrive 폴더 검색 실패:', err);
+    }
 
-            // 3. 현재 클릭한 파일의 선택 상태 토글
-            element.classList.toggle('selected');
-            updateBar();
+    // 메뉴 그룹 정의
+    const groups = [
+        {
+            title: '즐겨찾기',
+            items: [
+                { name: '바탕 화면', path: path.join(home, 'Desktop'), icon: '🖥️' },
+                { name: '다운로드', path: path.join(home, 'Downloads'), icon: '⬇️' },
+                { name: '문서', path: path.join(home, 'Documents'), icon: '📄' },
+                { name: '사진', path: path.join(home, 'Pictures'), icon: '🖼️' },
+                { name: '동영상', path: path.join(home, 'Videos'), icon: '🎬' },
+                { name: '음악', path: path.join(home, 'Music'), icon: '🎵' },
+                ...oneDriveFolders  // OneDrive 폴더들 자동 추가
+            ]
+        },
+        {
+            title: '내 PC',
+            items: [
+                { name: '로컬 디스크 (C:)', path: 'C:\\', icon: '💾' }
+            ]
+        }
+    ];
+
+    groups.forEach(group => {
+        // 섹션 제목 만들기
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'sidebar-section';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'sidebar-title';
+        titleDiv.innerText = group.title;
+        sectionDiv.appendChild(titleDiv);
+
+        let hasItem = false;
+
+        // 아이템 만들기
+        group.items.forEach(item => {
+            if (fs.existsSync(item.path)) { // ★ 진짜 있는 폴더만 추가
+                hasItem = true;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'nav-item';
+                if (item.name === '바탕 화면') itemDiv.classList.add('active');
+
+                itemDiv.innerHTML = `<i>${item.icon}</i>${item.name}`;
+                
+                // 클릭 이벤트
+                itemDiv.onclick = () => {
+                    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                    itemDiv.classList.add('active');
+                    
+                    document.querySelector('.path-bar').innerText = `내 PC > ${item.name}`;
+                    document.querySelector('header h1').innerText = item.name;
+                    
+                    currentPath = item.path;
+                    loadRealFiles(currentPath);
+                };
+
+                sectionDiv.appendChild(itemDiv);
+            }
+        });
+
+        // 아이템이 하나라도 있으면 화면에 붙이기
+        if (hasItem) {
+            sidebar.appendChild(sectionDiv);
+        }
+    });
+}
+
+/* --- 3. 실제 파일 목록 불러오기 --- */
+function loadRealFiles(targetPath) {
+    const grid = document.getElementById('fileGrid');
+    if(!grid) return;
+
+    fs.readdir(targetPath, (err, files) => {
+        if (err) {
+            grid.innerHTML = '<div style="padding:20px; color:#999;">폴더를 열 수 없습니다.</div>';
+            return;
         }
 
-        function changeFolder(element, folderName) {
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
+        grid.innerHTML = ''; 
 
-            const pathBar = document.querySelector('.path-bar');
-            const title = document.querySelector('header h1');
-            pathBar.innerText = folderName === '로컬 디스크 (C:)' ? '내 PC > 로컬 디스크 (C:)' : `내 PC > ${folderName}`;
-            title.innerText = folderName;
+        files.forEach(fileName => {
+            if (fileName.startsWith('.') || fileName === 'desktop.ini' || fileName === 'Thumbs.db' || fileName.endsWith('.lnk')) return;
 
-            refreshFiles(folderName);
-            updateBar();
-        }
+            const fullPath = path.join(targetPath, fileName);
+            let isDir = false;
+            try { isDir = fs.statSync(fullPath).isDirectory(); } catch(e) {}
 
-        function refreshFiles(folderName) {
-            const grid = document.querySelector('.file-grid');
-            grid.innerHTML = `
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('${folderName}_자료_01.dat')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
-                    <div style="font-size: 14px; font-weight: 600;">${folderName}_자료_01.dat</div>
-                </div>
-                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('비밀문서.dongin')">
-                    <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
-                    <div style="font-size: 14px; font-weight: 600;">비밀문서.dongin</div>
-                </div>
+            let icon = '📄';
+            if (isDir) icon = '📁';
+            else if (fileName.endsWith('.png') || fileName.endsWith('.jpg')) icon = '🖼️';
+            else if (fileName.endsWith('.pdf')) icon = '📕';
+            else if (fileName.endsWith('.dongin')) icon = '🔒';
+
+            const div = document.createElement('div');
+            div.className = 'file-card';
+            
+            div.onclick = function() { toggleSelect(this); };
+            div.ondblclick = function() { 
+                if (isDir) {
+                    currentPath = fullPath;
+                    loadRealFiles(currentPath);
+                    document.querySelector('.path-bar').innerText += ` > ${fileName}`;
+                } else {
+                    alert(`${fileName}`);
+                }
+            };
+
+            div.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 10px;">${icon}</div>
+                <div style="font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${fileName}</div>
             `;
-        }
+            grid.appendChild(div);
+        });
+    });
+}
 
-        /* --- 모달 제어 핸들러 --- */
-        function hideAllModals() {
-            document.getElementById('alertContent').style.display = 'none';
-            document.getElementById('settingsContent').style.display = 'none';
-            document.getElementById('logoutContent').style.display = 'none';
-            document.getElementById('progressContent').style.display = 'none';
-        }
+/* --- 4. 기능: 암호화/복호화 실행 --- */
+function handleExecution() {
+    const selectedFiles = document.querySelectorAll('.file-card.selected');
+    if (selectedFiles.length === 0) return alert('파일을 선택해주세요.');
 
-        function closeModal() {
-            document.getElementById('modalOverlay').style.display = 'none';
-        }
-
-        function switchTab(event, tabId) {
-            document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.settings-menu-item').forEach(item => item.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
-
-        function openAlert(title, body) {
-            hideAllModals();
-            document.getElementById('modalOverlay').style.display = 'flex';
-            document.getElementById('alertContent').style.display = 'block';
-            document.getElementById('alertTitle').innerText = title;
-            document.getElementById('alertBody').innerText = body;
-        }
-
-        function openSettings() {
-            hideAllModals();
-            document.getElementById('modalOverlay').style.display = 'flex';
-            document.getElementById('settingsContent').style.display = 'flex';
-        }
-
-        function logout() {
-            hideAllModals();
-            document.getElementById('modalOverlay').style.display = 'flex';
-            document.getElementById('logoutContent').style.display = 'block';
-        }
-
-        function showProgress(title, statusText) {
-            hideAllModals();
-            document.getElementById('modalOverlay').style.display = 'flex';
-            const content = document.getElementById('progressContent');
-            content.style.display = 'block';
-            document.getElementById('progressTitle').innerText = title;
-            document.getElementById('progressStatus').innerHTML = `${statusText} <span id="progressPercent">0</span>%`;
-            updateProgress(0);
-        }
-
-        /* --- 기능 실행 및 시뮬레이션 --- */
-        function handleExecution() {
-            const btnText = document.getElementById('executeBtn').innerText;
-            if (btnText === "암호화 실행") {
-                testProgress();
+    selectedFiles.forEach(card => {
+        const fileName = card.querySelector('div:last-child').innerText;
+        const fullPath = path.join(currentPath, fileName);
+        
+        try {
+            if (fileName.endsWith('.dongin')) {
+                // 복호화
+                const encryptedData = fs.readFileSync(fullPath);
+                const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, IV);
+                let decrypted = decipher.update(encryptedData);
+                decrypted = Buffer.concat([decrypted, decipher.final()]);
+                
+                const originalName = fileName.replace('.dongin', '');
+                fs.writeFileSync(path.join(currentPath, originalName), decrypted);
+                fs.unlinkSync(fullPath);
             } else {
-                showProgress('파일 복구 중', '암호화된 파일을 원래대로 되돌리는 중...');
-                startSimulation();
+                // 암호화
+                const data = fs.readFileSync(fullPath);
+                const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, IV);
+                let encrypted = cipher.update(data);
+                encrypted = Buffer.concat([encrypted, cipher.final()]);
+                
+                fs.writeFileSync(fullPath + '.dongin', encrypted);
+                fs.unlinkSync(fullPath);
             }
+        } catch (err) {
+            console.error(err);
+            alert(`오류: ${fileName} 처리 실패`);
         }
+    });
 
-        /* --- 삭제 로직 업데이트 --- */
+    setTimeout(() => {
+        loadRealFiles(currentPath);
+        updateBar();
+    }, 500);
+}
 
-        // 1. 삭제 모달 열기
-        function deleteFiles() {
-            const selectedCount = document.querySelectorAll('.file-card.selected').length;
-            if (selectedCount === 0) return;
+/* --- 5. UI 보조 함수들 --- */
+function toggleSelect(element) {
+    element.classList.toggle('selected');
+    updateBar();
+}
 
-            hideAllModals(); // 다른 모달 청소
-            document.getElementById('modalOverlay').style.display = 'flex';
-            document.getElementById('deleteContent').style.display = 'block';
-            document.getElementById('deleteMsg').innerText = `${selectedCount}개의 파일을 삭제하시겠습니까?`;
-        }
+function updateBar() {
+    const count = document.querySelectorAll('.file-card.selected').length;
+    const actionBar = document.getElementById('actionBar');
+    if(actionBar) {
+        if (count > 0) actionBar.classList.add('show');
+        else actionBar.classList.remove('show');
+        document.getElementById('count').innerText = count;
+    }
+}
 
-        // 2. 실제 삭제 수행
-        function executeDelete() {
-            // 1. 삭제할 파일 개수 미리 파악
-            const selectedFiles = document.querySelectorAll('.file-card.selected');
-            const count = selectedFiles.length;
-
-            // 2. 실제 파일 요소 제거
-            selectedFiles.forEach(card => card.remove());
-
-            // 3. 확인 모달 닫기 및 하단 바 갱신
-            closeModal();
-            updateBar();
-
-            // 4. 삭제 완료 알림 표시 (0.3초 지연을 주어 부드럽게 전환)
-            setTimeout(() => {
-                openAlert('삭제 완료', `${count}개의 파일이 삭제되었습니다.`);
-            }, 300);
-        }
-
-        // 3. 모달 초기화 함수 업데이트 (deleteContent 추가)
-        function hideAllModals() {
-            document.getElementById('alertContent').style.display = 'none';
-            document.getElementById('settingsContent').style.display = 'none';
-            document.getElementById('logoutContent').style.display = 'none';
-            document.getElementById('progressContent').style.display = 'none';
-            document.getElementById('deleteContent').style.display = 'none'; // 추가됨
-        }
-
-        function updateProgress(percent) {
-            const bar = document.getElementById('progressBar');
-            bar.style.width = percent + '%';
-            document.getElementById('progressPercent').innerText = percent;
-
-            if (percent >= 100) {
-                setTimeout(() => {
-                    closeModal();
-                    openAlert('완료', '모든 작업이 성공적으로 끝났습니다.');
-                }, 1000);
-            }
-        }
-
-        function testProgress() {
-            isCanceled = false;
-            showProgress('암호화 진행 중', '파일을 암호화 하는 중...');
-            startSimulation();
-        }
-
-        function startSimulation() {
-            let p = 0;
-            const interval = setInterval(() => {
-                if (isCanceled) {
-                    clearInterval(interval);
-                    return;
-                }
-                p += (Math.random() * 1.5) + 0.5;
-                if (p >= 100) {
-                    p = 100;
-                    clearInterval(interval);
-                }
-                updateProgress(Math.floor(p));
-            }, 50);
-        }
-
-        function cancelTask() {
-            isCanceled = true;
-            closeModal();
-            openAlert('중단됨', '사용자에 의해 작업이 취소되었습니다.');
-        }
-
-        function openFile(fileName) {
-            openAlert('파일 실행', `${fileName} 파일을 실행합니다.`);
-        }
+// 에러 방지용 빈 함수들
+function deleteFiles() { alert("삭제 기능은 안전을 위해 비활성화됨"); }
+function openSettings() { alert("설정 메뉴"); }
+function logout() { alert("로그아웃"); }
+function closeModal() { document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none'); }
     </script>
 </body>
 
