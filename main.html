@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN SECURE</title>
+    <style>
+        :root {
+            --bg: #f8faff;
+            --sidebar-bg: rgba(255, 255, 255, 0.4);
+            --accent: #a29bfe;
+            --text: #2d3436;
+            --glass: rgba(255, 255, 255, 0.85);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            background: var(--bg);
+            font-family: 'Pretendard', sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- 레이아웃: 사이드바 --- */
+        .sidebar {
+            width: 240px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+        }
+
+        .logo-area {
+            padding: 20px 15px 40px 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .logo-main {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #b2bec3;
+            padding-left: 15px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .nav-item {
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            color: #636e72;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .nav-item i {
+            margin-right: 12px;
+            font-style: normal;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 15px 10px;
+            display: flex;
+            gap: 5px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .footer-icon {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #636e72;
+            transition: 0.2s;
+        }
+
+        .footer-icon:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--accent);
+        }
+
+        .footer-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* --- 레이아웃: 메인 컨테이너 --- */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            padding: 25px 40px;
+        }
+
+        .path-bar {
+            font-size: 12px;
+            color: #b2bec3;
+            margin-bottom: 5px;
+        }
+
+        .file-zone {
+            flex: 1;
+            padding: 0 40px 100px 40px;
+            overflow-y: auto;
+        }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+
+        .file-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        }
+
+        .file-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-card.selected {
+            border-color: var(--accent);
+            background: rgba(162, 155, 254, 0.05);
+        }
+
+        /* --- 레이아웃: 하단 액션 바 --- */
+        .action-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 52, 54, 0.85);
+            backdrop-filter: blur(15px);
+            padding: 12px 25px;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            transition: 0.3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .action-bar.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .btn-execute {
+            background: var(--accent);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        /* --- 컴포넌트: 모달 --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(15px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .alert-modal {
+            background: var(--glass);
+            padding: 35px;
+            border-radius: 30px;
+            width: 320px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+            animation: pop 0.3s ease;
+        }
+
+        .settings-modal {
+            background: var(--glass);
+            border-radius: 32px;
+            width: 700px;
+            height: 500px;
+            display: flex;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+            animation: pop 0.4s ease;
+        }
+
+        .settings-sidebar {
+            width: 200px;
+            background: rgba(255, 255, 255, 0.3);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 30px 15px;
+        }
+
+        .settings-menu-item {
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #636e72;
+            transition: 0.2s;
+        }
+
+        .settings-menu-item.active {
+            background: white;
+            color: var(--accent);
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 40px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .settings-tab {
+            display: none;
+        }
+
+        .settings-tab.active {
+            display: block;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--text);
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            color: #636e72;
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-main">DONGIN</div>
+            <div class="logo-sub">SECURE</div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">즐겨찾기</div>
+            <div class="nav-item" onclick="changeFolder(this, 'OneDrive')"><i>☁️</i>OneDrive</div>
+            <div class="nav-item active" onclick="changeFolder(this, '바탕 화면')"><i>🖥️</i>바탕 화면</div>
+            <div class="nav-item" onclick="changeFolder(this, '다운로드')"><i>📥</i>다운로드</div>
+            <div class="nav-item" onclick="changeFolder(this, '문서')"><i>📄</i>문서</div>
+            <div class="nav-item" onclick="changeFolder(this, '사진')"><i>🖼️</i>사진</div>
+            <div class="nav-item" onclick="changeFolder(this, '동영상')"><i>🎬</i>동영상</div>
+            <div class="nav-item" onclick="changeFolder(this, '음악')"><i>🎵</i>음악</div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">내 PC</div>
+            <div class="nav-item" onclick="changeFolder(this, '내 PC')"><i>💻</i>내 PC</div>
+            <div class="nav-item" style="padding-left: 30px; font-size: 13px;"
+                onclick="changeFolder(this, '로컬 디스크 (C:)')"><i>💽</i>로컬 디스크 (C:)</div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="footer-icon" onclick="openSettings()" title="설정">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                </svg>
+            </div>
+            <div class="footer-icon" onclick="logout()" title="로그아웃">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <header>
+            <div class="path-bar">내 PC > 바탕 화면</div>
+            <h1 style="font-size: 20px; margin: 0;">바탕 화면</h1>
+        </header>
+
+        <div class="file-zone">
+            <div class="file-grid">
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('업무자료_최종.pdf')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📕</div>
+                    <div style="font-size: 14px; font-weight: 600;">업무자료_최종.pdf</div>
+                </div>
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('2026_예산안.xlsx')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📗</div>
+                    <div style="font-size: 14px; font-weight: 600;">2026_예산안.xlsx</div>
+                </div>
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('영수증_스캔.png')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🖼️</div>
+                    <div style="font-size: 14px; font-weight: 600;">영수증_스캔.png</div>
+                </div>
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('비밀번호_메모.txt')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📝</div>
+                    <div style="font-size: 14px; font-weight: 600;">비밀번호_메모.txt</div>
+                </div>
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('프로젝트_기획서.docx')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📘</div>
+                    <div style="font-size: 14px; font-weight: 600;">프로젝트_기획서.docx</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="actionBar" class="action-bar">
+            <span style="font-size: 13px;"><span id="count">0</span>개 파일 선택됨</span>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-execute" style="background: #ff7675;" onclick="deleteFiles()">삭제</button>
+                <button id="executeBtn" class="btn-execute" onclick="handleExecution()">암호화 실행</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay">
+
+        <div id="alertContent" class="alert-modal" style="display: none;">
+            <div id="alertTitle" style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">
+            </div>
+            <div id="alertBody" style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;"></div>
+            <button
+                style="background: var(--text); color: white; border: none; padding: 12px 25px; border-radius: 14px; width: 100%; cursor: pointer; font-weight: 600;"
+                onclick="closeModal()">확인</button>
+        </div>
+
+        <div id="logoutContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">로그아웃</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">로그아웃하시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button
+                    style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
+                    onclick="closeModal()">취소</button>
+                <button
+                    style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
+                    onclick="location.href='login.html'">확인</button>
+            </div>
+        </div>
+
+        <div id="progressContent" class="alert-modal" style="display: none;">
+            <div id="progressTitle" style="font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text);">
+                작업 진행 중</div>
+            <div
+                style="width: 100%; height: 12px; background: rgba(0,0,0,0.05); border-radius: 6px; overflow: hidden; margin-bottom: 15px;">
+                <div id="progressBar"
+                    style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;"></div>
+            </div>
+            <div id="progressStatus" style="font-size: 13px; color: #636e72; margin-bottom: 25px;">파일 처리 중... <span
+                    id="progressPercent">0</span>%</div>
+            <button
+                style="background: #f1f2f6; color: #636e72; border: none; padding: 10px 30px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 13px; display: block; margin: 0 auto;"
+                onclick="cancelTask()">취소</button>
+        </div>
+
+        <div id="deleteContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: #ff7675;">파일 삭제</div>
+            <div id="deleteMsg" style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">
+                선택한 파일을 삭제하시겠습니까?
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button
+                    style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
+                    onclick="closeModal()">취소</button>
+                <button
+                    style="flex: 1; background: #ff7675; color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
+                    onclick="executeDelete()">삭제</button>
+            </div>
+        </div>
+
+        <div id="settingsContent" class="settings-modal" style="display: none;">
+            <div class="settings-sidebar">
+                <div class="settings-menu-item active" onclick="switchTab(event, 'general')">일반</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'security')">보안 설정</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'account')">사용자 계정</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'notice')">알림</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'info')">프로그램 정보</div>
+            </div>
+            <div class="settings-content">
+                <button class="close-btn" onclick="closeModal()">×</button>
+                <div id="general" class="settings-tab active">
+                    <div class="settings-title">일반</div>
+                    <div class="setting-group">
+                        <label class="setting-label">테마 설정</label>
+                        <select style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                            <option>밝은 테마 (기본)</option>
+                            <option>어두운 테마</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">윈도우 시작 시 자동 실행</label>
+                        <input type="checkbox" checked> <span style="font-size: 13px;">컴퓨터를 켜면 바로 DONGIN SECURE를
+                            실행합니다.</span>
+                    </div>
+                </div>
+                <div id="security" class="settings-tab">
+                    <div class="settings-title">보안 설정</div>
+                    <div class="setting-group">
+                        <label class="setting-label">암호화 알고리즘</label>
+                        <div style="font-size: 12px; color: #b2bec3;">현재 AES-256 비트 암호화가 적용 중입니다.</div>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">자동 잠금 시간</label>
+                        <input type="number" value="10" style="width: 60px; padding: 5px;"> 분 동안 활동이 없으면 프로그램을 잠급니다.
+                    </div>
+                </div>
+                <div id="account" class="settings-tab">
+                    <div class="settings-title">사용자 계정</div>
+                    <p style="font-size: 14px; color:#636e72;">로그인 정보 및 라이선스 관리</p>
+                </div>
+                <div id="notice" class="settings-tab">
+                    <div class="settings-title">알림</div>
+                    <p style="font-size: 14px; color:#636e72;">푸시 알림 및 소리 설정</p>
+                </div>
+                <div id="info" class="settings-tab">
+                    <div class="settings-title">프로그램 정보</div>
+                    <p style="font-size: 14px; color:#636e72;">DONGIN SECURE v1.0.4</p>
+                    <p style="font-size: 12px; color:#b2bec3;">최신 버전입니다.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* --- 변수 설정 및 상태 관리 --- */
+        let isCanceled = false;
+
+        /* --- UI 업데이트 핸들러 --- */
+        function updateBar() {
+            const selectedFiles = document.querySelectorAll('.file-card.selected');
+            const count = selectedFiles.length;
+            const actionBar = document.getElementById('actionBar');
+            const executeBtn = document.getElementById('executeBtn');
+
+            if (count > 0) {
+                actionBar.classList.add('show');
+                document.getElementById('count').innerText = count;
+
+                const hasEncrypted = Array.from(selectedFiles).some(card =>
+                    card.querySelector('div:last-child').innerText.toLowerCase().endsWith('.dongin')
+                );
+
+                executeBtn.innerText = hasEncrypted ? "복구 실행" : "암호화 실행";
+            } else {
+                actionBar.classList.remove('show');
+            }
+        }
+
+        function toggleSelect(element) {
+            element.classList.toggle('selected');
+            updateBar();
+        }
+
+        function changeFolder(element, folderName) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+
+            const pathBar = document.querySelector('.path-bar');
+            const title = document.querySelector('header h1');
+            pathBar.innerText = folderName === '로컬 디스크 (C:)' ? '내 PC > 로컬 디스크 (C:)' : `내 PC > ${folderName}`;
+            title.innerText = folderName;
+
+            refreshFiles(folderName);
+            updateBar();
+        }
+
+        function refreshFiles(folderName) {
+            const grid = document.querySelector('.file-grid');
+            grid.innerHTML = `
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('${folderName}_자료_01.dat')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
+                    <div style="font-size: 14px; font-weight: 600;">${folderName}_자료_01.dat</div>
+                </div>
+                <div class="file-card" onclick="toggleSelect(this)" ondblclick="openFile('비밀문서.dongin')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
+                    <div style="font-size: 14px; font-weight: 600;">비밀문서.dongin</div>
+                </div>
+            `;
+        }
+
+        /* --- 모달 제어 핸들러 --- */
+        function hideAllModals() {
+            document.getElementById('alertContent').style.display = 'none';
+            document.getElementById('settingsContent').style.display = 'none';
+            document.getElementById('logoutContent').style.display = 'none';
+            document.getElementById('progressContent').style.display = 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.settings-menu-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function openAlert(title, body) {
+            hideAllModals();
+            document.getElementById('modalOverlay').style.display = 'flex';
+            document.getElementById('alertContent').style.display = 'block';
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertBody').innerText = body;
+        }
+
+        function openSettings() {
+            hideAllModals();
+            document.getElementById('modalOverlay').style.display = 'flex';
+            document.getElementById('settingsContent').style.display = 'flex';
+        }
+
+        function logout() {
+            hideAllModals();
+            document.getElementById('modalOverlay').style.display = 'flex';
+            document.getElementById('logoutContent').style.display = 'block';
+        }
+
+        function showProgress(title, statusText) {
+            hideAllModals();
+            document.getElementById('modalOverlay').style.display = 'flex';
+            const content = document.getElementById('progressContent');
+            content.style.display = 'block';
+            document.getElementById('progressTitle').innerText = title;
+            document.getElementById('progressStatus').innerHTML = `${statusText} <span id="progressPercent">0</span>%`;
+            updateProgress(0);
+        }
+
+        /* --- 기능 실행 및 시뮬레이션 --- */
+        function handleExecution() {
+            const btnText = document.getElementById('executeBtn').innerText;
+            if (btnText === "암호화 실행") {
+                testProgress();
+            } else {
+                showProgress('파일 복구 중', '암호화된 파일을 원래대로 되돌리는 중...');
+                startSimulation();
+            }
+        }
+
+        /* --- 삭제 로직 업데이트 --- */
+
+        // 1. 삭제 모달 열기
+        function deleteFiles() {
+            const selectedCount = document.querySelectorAll('.file-card.selected').length;
+            if (selectedCount === 0) return;
+
+            hideAllModals(); // 다른 모달 청소
+            document.getElementById('modalOverlay').style.display = 'flex';
+            document.getElementById('deleteContent').style.display = 'block';
+            document.getElementById('deleteMsg').innerText = `${selectedCount}개의 파일을 삭제하시겠습니까?`;
+        }
+
+        // 2. 실제 삭제 수행
+        function executeDelete() {
+            // 1. 삭제할 파일 개수 미리 파악
+            const selectedFiles = document.querySelectorAll('.file-card.selected');
+            const count = selectedFiles.length;
+
+            // 2. 실제 파일 요소 제거
+            selectedFiles.forEach(card => card.remove());
+
+            // 3. 확인 모달 닫기 및 하단 바 갱신
+            closeModal();
+            updateBar();
+
+            // 4. 삭제 완료 알림 표시 (0.3초 지연을 주어 부드럽게 전환)
+            setTimeout(() => {
+                openAlert('삭제 완료', `${count}개의 파일이 삭제되었습니다.`);
+            }, 300);
+        }
+
+        // 3. 모달 초기화 함수 업데이트 (deleteContent 추가)
+        function hideAllModals() {
+            document.getElementById('alertContent').style.display = 'none';
+            document.getElementById('settingsContent').style.display = 'none';
+            document.getElementById('logoutContent').style.display = 'none';
+            document.getElementById('progressContent').style.display = 'none';
+            document.getElementById('deleteContent').style.display = 'none'; // 추가됨
+        }
+
+        function updateProgress(percent) {
+            const bar = document.getElementById('progressBar');
+            bar.style.width = percent + '%';
+            document.getElementById('progressPercent').innerText = percent;
+
+            if (percent >= 100) {
+                setTimeout(() => {
+                    closeModal();
+                    openAlert('완료', '모든 작업이 성공적으로 끝났습니다.');
+                }, 1000);
+            }
+        }
+
+        function testProgress() {
+            isCanceled = false;
+            showProgress('암호화 진행 중', '파일을 암호화 하는 중...');
+            startSimulation();
+        }
+
+        function startSimulation() {
+            let p = 0;
+            const interval = setInterval(() => {
+                if (isCanceled) {
+                    clearInterval(interval);
+                    return;
+                }
+                p += (Math.random() * 1.5) + 0.5;
+                if (p >= 100) {
+                    p = 100;
+                    clearInterval(interval);
+                }
+                updateProgress(Math.floor(p));
+            }, 50);
+        }
+
+        function cancelTask() {
+            isCanceled = true;
+            closeModal();
+            openAlert('중단됨', '사용자에 의해 작업이 취소되었습니다.');
+        }
+
+        function openFile(fileName) {
+            openAlert('파일 실행', `${fileName} 파일을 실행합니다.`);
+        }
+    </script>
+</body>
+
+</html>

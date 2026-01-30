@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN SECURE</title>
+    <style>
+        /* 1. Base / Layout */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8faff;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 2. Background Elements (Wave) */
+        .wave-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            transform: translateY(-30%) rotate(15deg);
+            animation: wave-rise 2.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            transition: transform 1s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .wave {
+            position: absolute;
+            top: -110%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(135deg, #a29bfe 0%, #74b9ff 100%);
+            border-radius: 48%;
+            opacity: 0.4;
+            animation: wave-rotate 25s linear infinite;
+        }
+
+        .wave:nth-child(2) {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            animation-duration: 35s;
+            animation-direction: reverse;
+            opacity: 0.2;
+        }
+
+        .wave:nth-child(3) {
+            background: linear-gradient(135deg, #81ecec 0%, #74b9ff 100%);
+            animation-duration: 45s;
+            opacity: 0.2;
+        }
+
+        /* 3. Main Component (Login Card) */
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            will-change: transform, opacity;
+            transform: translateY(0);
+            opacity: 1;
+            animation: card-appear 1s cubic-bezier(0.23, 1, 0.32, 1) 1.2s forwards;
+            transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.8s;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            width: 340px;
+        }
+
+        /* 4. Form Elements */
+        h1 {
+            color: #2d3436;
+            font-size: 22px;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            height: 50px;
+            padding: 0 15px;
+            margin-bottom: 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.9);
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        button {
+            width: 100%;
+            height: 54px;
+            margin-top: 20px;
+            background: #2d3436;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        button:hover {
+            background: #000;
+            transform: translateY(-2px);
+        }
+
+        /* 5. State Modifiers (Error, Loading, Success) */
+        .error-box {
+            color: #ff7675;
+            font-size: 13px;
+            margin-top: 10px;
+            opacity: 0;
+            transition: 0.3s;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .error-box.show {
+            opacity: 1;
+            height: 20px;
+            margin-top: 15px;
+            animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        button.loading,
+        button.success-btn {
+            width: 54px;
+            border-radius: 50%;
+            font-size: 0;
+            cursor: default;
+        }
+
+        button.loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        button.success-btn {
+            background: #2ecc71 !important;
+            transform: scale(1.1);
+        }
+
+        button.success-btn::after {
+            content: "✓";
+            font-size: 26px;
+            color: white;
+            display: inline-block;
+            animation: check-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.5) forwards;
+        }
+
+        .wave-wrapper.success {
+            animation: wave-exit 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards !important;
+        }
+
+        .login-wrapper.success {
+            animation: card-exit 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards !important;
+        }
+
+        /* --- Keyframes (Time-based Order) --- */
+
+        /* Entrance */
+        @keyframes wave-rise {
+            0% {
+                transform: translateY(100%) rotate(0deg);
+            }
+
+            100% {
+                transform: translateY(-30%) rotate(15deg);
+            }
+        }
+
+        @keyframes card-appear {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loop */
+        @keyframes wave-rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Interaction */
+        @keyframes check-pop {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        /* Exit */
+        @keyframes wave-exit {
+            from {
+                transform: translateY(-30%) rotate(15deg);
+            }
+
+            to {
+                transform: translateY(-120%) rotate(20deg);
+            }
+        }
+
+        @keyframes card-exit {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(1.5);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wave-wrapper">
+        <div class="wave"></div>
+        <div class="wave"></div>
+        <div class="wave"></div>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h1 style="font-weight: 900;">
+                <span style="color: #2d3436;">DONGIN</span>
+                <span style="color: #a29bfe;">SECURE</span>
+            </h1>
+            <input type="email" id="email" placeholder="이메일">
+            <input type="password" id="password" placeholder="비밀번호">
+
+            <div id="errorBox" class="error-box">이메일 또는 비밀번호가 일치하지 않습니다.</div>
+
+            <button onclick="checkLogin()">계속하기</button>
+        </div>
+    </div>
+
+    <script>
+        function checkLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.querySelector('button');
+
+            if (email === 'user' && password === '1234') {
+                const errorBox = document.getElementById('errorBox');
+                errorBox.classList.remove('show');
+                btn.classList.add('loading');
+
+                setTimeout(() => {
+                    btn.classList.remove('loading');
+                    btn.classList.add('success-btn'); 
+
+                    setTimeout(() => {
+                        document.querySelector('.wave-wrapper').classList.add('success');
+                        document.querySelector('.login-wrapper').classList.add('success');
+
+                        setTimeout(() => {
+                            window.location.href = 'main.html';
+                        }, 1000);
+                    }, 1000);
+                }, 800);
+            } else {
+                const errorBox = document.getElementById('errorBox');
+                errorBox.classList.remove('show');
+                void errorBox.offsetWidth;
+                errorBox.classList.add('show');
+            }
+        }
+
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                document.getElementById('errorBox').classList.remove('show');
+            });
+        });
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkLogin();
+            }
+        });
+    </script>
+</body>
+
+</html>
