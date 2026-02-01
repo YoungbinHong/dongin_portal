@@ -3,4 +3,3 @@ dist/
 .envnode_modules/
 package-lock.json
 .aider*
-.env
