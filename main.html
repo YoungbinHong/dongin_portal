@@ -1061,7 +1061,13 @@ function loadRealFiles(targetPath) {
         grid.innerHTML = ''; 
 
         files.forEach(fileName => {
-            if (fileName.startsWith('.') || fileName === 'desktop.ini' || fileName === 'Thumbs.db' || fileName.endsWith('.lnk')) return;
+            // 숨김파일, 시스템파일, 임시파일 제외
+            if (fileName.startsWith('.') ||           // 숨김 파일 (예: .git, .DS_Store)
+                fileName.startsWith('$') ||           // 시스템 파일 (예: $RECYCLE.BIN)
+                fileName.startsWith('~$') ||          // 오피스 임시파일 (예: ~$file.xlsx)
+                fileName === 'desktop.ini' ||         // Windows 바탕화면 설정
+                fileName === 'Thumbs.db' ||           // Windows 썸네일 캐시
+                fileName.endsWith('.lnk')) return;    // 바로가기 파일
 
             const fullPath = path.join(targetPath, fileName);
             let isDir = false;
