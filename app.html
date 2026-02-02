@@ -224,9 +224,10 @@
     </div>
 
     <!-- 서버 연결 상태 표시 -->
-    <div id="serverStatusContainer" class="server-status" onmouseover="showServerTooltip()" onmouseout="hideServerTooltip()" title="서버 상태">
-        <span id="serverStatus">📶</span>
-        <div id="serverTooltip" class="server-tooltip"></div>
+    <div id="serverStatusContainer" class="server-status">
+        <div id="serverStatusDot" class="server-status-dot"></div>
+        <span class="server-status-text">연결됨</span>
+        <div id="serverTooltip" class="server-tooltip">서버와 연결되었습니다.</div>
     </div>
 
     <!-- 로그아웃 전환 오버레이 -->

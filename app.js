@@ -960,33 +960,21 @@ let serverConnected = true;
 function updateServerStatus() {
     serverConnected = true;
 
-    const statusElement = document.getElementById('serverStatus');
+    const dot = document.getElementById('serverStatusDot');
     const container = document.getElementById('serverStatusContainer');
+    const textEl = container?.querySelector('.server-status-text');
+    const tooltip = document.getElementById('serverTooltip');
 
-    if (statusElement && container) {
+    if (dot && container) {
         if (serverConnected) {
-            statusElement.textContent = '📶';
-            container.style.opacity = '1';
-            document.getElementById('serverTooltip').textContent = '서버와 연결되었습니다.';
+            dot.classList.remove('disconnected');
+            if (textEl) textEl.textContent = '연결됨';
+            if (tooltip) tooltip.textContent = '서버와 연결되었습니다.';
         } else {
-            statusElement.textContent = '📡';
-            container.style.opacity = '0.6';
-            document.getElementById('serverTooltip').textContent = '서버 연결이 끊어졌습니다.';
+            dot.classList.add('disconnected');
+            if (textEl) textEl.textContent = '연결 끊김';
+            if (tooltip) tooltip.textContent = '서버 연결이 끊어졌습니다.';
         }
-    }
-}
-
-function showServerTooltip() {
-    const tooltip = document.getElementById('serverTooltip');
-    if (tooltip) {
-        tooltip.style.display = 'block';
-    }
-}
-
-function hideServerTooltip() {
-    const tooltip = document.getElementById('serverTooltip');
-    if (tooltip) {
-        tooltip.style.display = 'none';
     }
 }
 
