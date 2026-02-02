@@ -11,6 +11,7 @@ let viewMode = 'list'; // 'grid' 또는 'list' (기본: 자세히)
 let currentSort = null; // 'name', 'date', 'type', 'size' 또는 null
 let sortDirection = null; // 'asc', 'desc' 또는 null
 let originalFiles = []; // 정렬 전 원본 파일 목록
+let lastSelectedPath = null; // Shift 범위 선택을 위한 마지막 선택 경로
 
 /* --- 경로 관리 함수들 --- */
 function navigateTo(newPath, displayName = null) {
@@ -219,46 +220,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* --- 드래그 선택 기능 --- */
-let isDragging = false;
+let isDragPending = false;  // 마우스 다운 후 드래그 대기 상태
+let isDragging = false;     // 실제 드래그 중인 상태
 let dragStartX = 0;
 let dragStartY = 0;
+const DRAG_THRESHOLD = 5;   // 드래그 시작 임계값 (픽셀)
 
 function initDragSelection() {
-    const fileZone = document.getElementById('fileZone');
     const selectionBox = document.getElementById('selectionBox');
     const mainContainer = document.querySelector('.main-container');
-    if (!fileZone || !selectionBox) return;
+    if (!mainContainer || !selectionBox) return;
 
-    // 메인 컨테이너 어디든 클릭하면 선택 해제 (헤더 포함)
-    if (mainContainer) {
-        mainContainer.addEventListener('mousedown', (e) => {
-            // 파일 아이템, 버튼, 액션바 클릭 시 무시
-            if (e.target.closest('.file-card') ||
-                e.target.closest('.file-list-item') ||
-                e.target.closest('.action-bar') ||
-                e.target.closest('button')) {
-                return;
-            }
-
-            // Ctrl 키가 눌려있지 않으면 선택 해제
-            if (!e.ctrlKey) {
-                clearAllSelections();
-            }
-        });
-    }
-
-    fileZone.addEventListener('mousedown', (e) => {
-        // 파일 아이템이나 헤더 클릭 시 드래그 무시
-        if (e.target.closest('.file-card') ||
-            e.target.closest('.file-list-item') ||
-            e.target.closest('.file-list-header')) {
+    // 메인 컨테이너(오른쪽 페인) 전체에서 드래그 시작 가능
+    mainContainer.addEventListener('mousedown', (e) => {
+        // 버튼, 액션바, 헤더, 스크롤바 클릭 시 무시
+        if (e.target.closest('.action-bar') ||
+            e.target.closest('button') ||
+            e.target.closest('.file-list-header') ||
+            e.target.closest('input') ||
+            e.target.closest('select')) {
             return;
         }
 
-        isDragging = true;
+        // 드래그 대기 상태로 전환 (아직 실제 드래그는 아님)
+        isDragPending = true;
+        isDragging = false;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
 
+        // 선택 박스 초기 위치 설정
         selectionBox.style.left = dragStartX + 'px';
         selectionBox.style.top = dragStartY + 'px';
         selectionBox.style.width = '0';
@@ -266,10 +256,27 @@ function initDragSelection() {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
+        if (!isDragPending && !isDragging) return;
 
         const currentX = e.clientX;
         const currentY = e.clientY;
+        const deltaX = Math.abs(currentX - dragStartX);
+        const deltaY = Math.abs(currentY - dragStartY);
+
+        // 임계값을 넘어야 드래그 시작 (클릭과 드래그 구분)
+        if (isDragPending && !isDragging) {
+            if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+                isDragging = true;
+                isDragPending = false;
+
+                // Ctrl 키가 눌려있지 않으면 기존 선택 해제
+                if (!e.ctrlKey) {
+                    clearAllSelections();
+                }
+            } else {
+                return; // 아직 임계값 미만이면 대기
+            }
+        }
 
         const left = Math.min(dragStartX, currentX);
         const top = Math.min(dragStartY, currentY);
@@ -286,7 +293,9 @@ function initDragSelection() {
         selectItemsInBox(left, top, width, height, e.ctrlKey);
     });
 
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', (e) => {
+        const wasDragging = isDragging;
+
         if (isDragging) {
             isDragging = false;
             selectionBox.classList.remove('active');
@@ -294,6 +303,22 @@ function initDragSelection() {
             selectionBox.style.height = '0';
             updateBar();
         }
+
+        // 드래그 없이 클릭만 한 경우 (파일 아이템이 아닌 빈 공간 클릭)
+        if (isDragPending && !wasDragging) {
+            const target = e.target;
+            if (!target.closest('.file-card') &&
+                !target.closest('.file-list-item') &&
+                !target.closest('.action-bar') &&
+                !target.closest('button')) {
+                // Ctrl 키가 눌려있지 않으면 선택 해제
+                if (!e.ctrlKey) {
+                    clearAllSelections();
+                }
+            }
+        }
+
+        isDragPending = false;
     });
 }
 
@@ -652,7 +677,7 @@ async function renderFileList() {
         gridItem.dataset.path = fullPath;
         gridItem.dataset.isDir = isDir;
 
-        gridItem.onclick = function () { toggleSelect(this); };
+        gridItem.onclick = function (e) { toggleSelect(this, e); };
         gridItem.ondblclick = function () {
             if (isDir) {
                 navigateTo(fullPath, fileName);
@@ -673,7 +698,7 @@ async function renderFileList() {
         listItem.dataset.path = fullPath;
         listItem.dataset.isDir = isDir;
 
-        listItem.onclick = function () { toggleSelectList(this); };
+        listItem.onclick = function (e) { toggleSelectList(this, e); };
         listItem.ondblclick = function () {
             if (isDir) {
                 navigateTo(fullPath, fileName);
@@ -984,30 +1009,109 @@ function clearConflictingSelections(isTargetEncrypted) {
     });
 }
 
-function toggleSelect(element) {
+function toggleSelect(element, event) {
     const currentName = element.querySelector('div:last-child').innerText.toLowerCase();
     const isTargetEncrypted = currentName.endsWith('.dongin');
-
-    clearConflictingSelections(isTargetEncrypted);
-
     const path = element.dataset.path;
-    const isSelected = element.classList.contains('selected');
-    syncSelection(path, !isSelected);
+
+    if (event && event.shiftKey && lastSelectedPath) {
+        // Shift + 클릭: 범위 선택
+        selectRange(lastSelectedPath, path, 'grid');
+    } else if (event && event.ctrlKey) {
+        // Ctrl + 클릭: 토글 (기존 선택 유지)
+        clearConflictingSelections(isTargetEncrypted);
+        const isSelected = element.classList.contains('selected');
+        syncSelection(path, !isSelected);
+        if (!isSelected) {
+            lastSelectedPath = path;
+        }
+    } else {
+        // 일반 클릭: 단일 선택 (기존 선택 해제)
+        clearAllSelections();
+        clearConflictingSelections(isTargetEncrypted);
+        syncSelection(path, true);
+        lastSelectedPath = path;
+    }
 
     updateBar();
 }
 
-function toggleSelectList(element) {
+function toggleSelectList(element, event) {
     const currentName = element.querySelector('.file-name span:last-child').innerText.toLowerCase();
     const isTargetEncrypted = currentName.endsWith('.dongin');
-
-    clearConflictingSelections(isTargetEncrypted);
-
     const path = element.dataset.path;
-    const isSelected = element.classList.contains('selected');
-    syncSelection(path, !isSelected);
+
+    if (event && event.shiftKey && lastSelectedPath) {
+        // Shift + 클릭: 범위 선택
+        selectRange(lastSelectedPath, path, 'list');
+    } else if (event && event.ctrlKey) {
+        // Ctrl + 클릭: 토글 (기존 선택 유지)
+        clearConflictingSelections(isTargetEncrypted);
+        const isSelected = element.classList.contains('selected');
+        syncSelection(path, !isSelected);
+        if (!isSelected) {
+            lastSelectedPath = path;
+        }
+    } else {
+        // 일반 클릭: 단일 선택 (기존 선택 해제)
+        clearAllSelections();
+        clearConflictingSelections(isTargetEncrypted);
+        syncSelection(path, true);
+        lastSelectedPath = path;
+    }
 
     updateBar();
+}
+
+function selectRange(startPath, endPath, viewType) {
+    // 현재 뷰의 모든 아이템 가져오기
+    const items = viewType === 'grid'
+        ? Array.from(document.querySelectorAll('.file-card'))
+        : Array.from(document.querySelectorAll('.file-list-item'));
+
+    // 시작과 끝 인덱스 찾기
+    let startIndex = items.findIndex(item => item.dataset.path === startPath);
+    let endIndex = items.findIndex(item => item.dataset.path === endPath);
+
+    if (startIndex === -1 || endIndex === -1) return;
+
+    // 인덱스 정렬 (작은 것부터 큰 것으로)
+    if (startIndex > endIndex) {
+        [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    // 범위 내 첫 번째 아이템의 암호화 상태 확인
+    const firstItem = items[startIndex];
+    let firstName;
+    if (viewType === 'grid') {
+        firstName = firstItem.querySelector('div:last-child').innerText.toLowerCase();
+    } else {
+        firstName = firstItem.querySelector('.file-name span:last-child').innerText.toLowerCase();
+    }
+    const isTargetEncrypted = firstName.endsWith('.dongin');
+
+    // 기존 선택 해제 후 범위 선택
+    clearAllSelections();
+    clearConflictingSelections(isTargetEncrypted);
+
+    // 범위 내 모든 아이템 선택
+    for (let i = startIndex; i <= endIndex; i++) {
+        const item = items[i];
+        let itemName;
+        if (viewType === 'grid') {
+            itemName = item.querySelector('div:last-child').innerText.toLowerCase();
+        } else {
+            itemName = item.querySelector('.file-name span:last-child').innerText.toLowerCase();
+        }
+        const isItemEncrypted = itemName.endsWith('.dongin');
+
+        // 암호화 상태가 같은 파일만 선택
+        if (isItemEncrypted === isTargetEncrypted) {
+            syncSelection(item.dataset.path, true);
+        }
+    }
+
+    lastSelectedPath = endPath;
 }
 
 function updateBar() {

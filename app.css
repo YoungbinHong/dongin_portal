@@ -172,6 +172,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px 10px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .logo-area {
@@ -294,6 +296,8 @@ header {
     display: flex;
     align-items: center;
     gap: 15px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .back-btn {
