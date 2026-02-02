@@ -199,10 +199,38 @@ function loadSavedTheme() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("프로그램 시작됨");
     loadSavedTheme();           // 0. 저장된 테마 불러오기
+    loadNoticeSettings();       // 0-1. 저장된 알림 설정 불러오기
     initSidebar();              // 1. 사이드바 그려라!
     updateBreadcrumb();         // 2. 초기 경로 표시
     loadRealFiles(currentPath); // 3. 파일 목록 가져와라!
 });
+
+/* --- 알림 설정 관리 --- */
+function loadNoticeSettings() {
+    // 완료 알림 설정 (기본값: true)
+    const noticeCompletion = localStorage.getItem('notice-completion') !== 'false';
+    const notice1 = document.getElementById('notice1');
+    if (notice1) {
+        notice1.checked = noticeCompletion;
+    }
+
+    // 보안 알림 설정 (기본값: true)
+    const noticeSecurity = localStorage.getItem('notice-security') !== 'false';
+    const notice2 = document.getElementById('notice2');
+    if (notice2) {
+        notice2.checked = noticeSecurity;
+    }
+}
+
+function toggleNoticeCompletion(enabled) {
+    localStorage.setItem('notice-completion', enabled ? 'true' : 'false');
+    console.log('완료 알림 설정:', enabled);
+}
+
+function toggleNoticeSecurity(enabled) {
+    localStorage.setItem('notice-security', enabled ? 'true' : 'false');
+    console.log('보안 알림 설정:', enabled);
+}
 
 /* --- 2. 사이드바 자동 생성 함수 (디자인 복구) --- */
 function initSidebar() {
@@ -674,6 +702,13 @@ function logout() {
 
 // 파일 처리 완료 모달 표시
 function showCompletionModal(message) {
+    // 알림 설정 확인 - 비활성화되어 있으면 표시하지 않음
+    const noticeEnabled = localStorage.getItem('notice-completion') !== 'false';
+    if (!noticeEnabled) {
+        console.log('완료 알림이 비활성화되어 있습니다:', message);
+        return;
+    }
+
     // 타임아웃 취소 (이전이 있으면)
     if (completeTimeoutId) {
         clearTimeout(completeTimeoutId);

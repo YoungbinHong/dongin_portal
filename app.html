@@ -174,10 +174,10 @@
                         <label class="setting-label">알림 설정</label>
                         <div style="margin-top: 10px;">
                             <div style="margin-bottom: 12px;">
-                                <input type="checkbox" id="notice1" checked> <label for="notice1" style="font-size: 13px; cursor: pointer;">파일 암호화/복호화 완료 알림</label>
+                                <input type="checkbox" id="notice1" checked onchange="toggleNoticeCompletion(this.checked)"> <label for="notice1" style="font-size: 13px; cursor: pointer;">파일 암호화/복호화 완료 알림</label>
                             </div>
                             <div style="margin-bottom: 12px;">
-                                <input type="checkbox" id="notice2" checked> <label for="notice2" style="font-size: 13px; cursor: pointer;">보안 관련 알림</label>
+                                <input type="checkbox" id="notice2" checked onchange="toggleNoticeSecurity(this.checked)"> <label for="notice2" style="font-size: 13px; cursor: pointer;">보안 관련 알림</label>
                             </div>
                         </div>
                     </div>
