@@ -8,6 +8,9 @@ let lastActivityTime = Date.now();
 let homePath = '';
 let pathSep = '\\';
 let viewMode = 'list'; // 'grid' 또는 'list' (기본: 자세히)
+let currentSort = null; // 'name', 'date', 'type', 'size' 또는 null
+let sortDirection = null; // 'asc', 'desc' 또는 null
+let originalFiles = []; // 정렬 전 원본 파일 목록
 
 /* --- 경로 관리 함수들 --- */
 function navigateTo(newPath, displayName = null) {
@@ -428,6 +431,147 @@ function loadSavedViewMode() {
     }
 }
 
+/* --- 정렬 기능 --- */
+function toggleSort(column) {
+    const headers = document.querySelectorAll('.file-list-header .sortable');
+
+    if (currentSort === column) {
+        // 같은 컬럼 클릭: asc → desc → null 순환
+        if (sortDirection === 'asc') {
+            sortDirection = 'desc';
+        } else if (sortDirection === 'desc') {
+            sortDirection = null;
+            currentSort = null;
+        }
+    } else {
+        // 다른 컬럼 클릭: 해당 컬럼으로 오름차순 시작
+        currentSort = column;
+        sortDirection = 'asc';
+    }
+
+    // 헤더 UI 업데이트
+    headers.forEach(header => {
+        header.classList.remove('asc', 'desc', 'active');
+        if (header.dataset.sort === currentSort) {
+            header.classList.add('active');
+            if (sortDirection) {
+                header.classList.add(sortDirection);
+            }
+        }
+    });
+
+    // 파일 목록 다시 렌더링
+    renderFileList();
+}
+
+function sortFiles(files) {
+    if (!currentSort || !sortDirection) {
+        return [...files]; // 원본 순서 유지
+    }
+
+    const sorted = [...files];
+    const dir = sortDirection === 'asc' ? 1 : -1;
+
+    sorted.sort((a, b) => {
+        // 폴더를 항상 먼저 표시
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+
+        let comparison = 0;
+
+        switch (currentSort) {
+            case 'name':
+                comparison = a.name.localeCompare(b.name, 'ko');
+                break;
+            case 'date':
+                comparison = (a.modifiedTime || 0) - (b.modifiedTime || 0);
+                break;
+            case 'type':
+                const typeA = getFileType(a.name, a.isDirectory);
+                const typeB = getFileType(b.name, b.isDirectory);
+                comparison = typeA.localeCompare(typeB, 'ko');
+                break;
+            case 'size':
+                comparison = (a.size || 0) - (b.size || 0);
+                break;
+        }
+
+        return comparison * dir;
+    });
+
+    return sorted;
+}
+
+async function renderFileList() {
+    const grid = document.getElementById('fileGrid');
+    const listBody = document.getElementById('fileListBody');
+    if (!grid || !listBody) return;
+
+    grid.innerHTML = '';
+    listBody.innerHTML = '';
+
+    const sortedFiles = sortFiles(originalFiles);
+
+    for (const file of sortedFiles) {
+        const fileName = file.name;
+        const fullPath = file.fullPath;
+        const isDir = file.isDirectory;
+
+        let icon = '📄';
+        if (isDir) icon = '📁';
+        else if (fileName.endsWith('.png') || fileName.endsWith('.jpg')) icon = '🖼️';
+        else if (fileName.endsWith('.pdf')) icon = '📕';
+        else if (fileName.endsWith('.dongin')) icon = '🔒';
+
+        // 그리드 뷰 아이템
+        const gridItem = document.createElement('div');
+        gridItem.className = 'file-card';
+        gridItem.dataset.path = fullPath;
+        gridItem.dataset.isDir = isDir;
+
+        gridItem.onclick = function () { toggleSelect(this); };
+        gridItem.ondblclick = function () {
+            if (isDir) {
+                navigateTo(fullPath, fileName);
+            } else {
+                openFile(fullPath);
+            }
+        };
+
+        gridItem.innerHTML = `
+            <div style="font-size: 40px; margin-bottom: 10px;">${icon}</div>
+            <div style="font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${fileName}</div>
+        `;
+        grid.appendChild(gridItem);
+
+        // 리스트 뷰 아이템
+        const listItem = document.createElement('div');
+        listItem.className = 'file-list-item';
+        listItem.dataset.path = fullPath;
+        listItem.dataset.isDir = isDir;
+
+        listItem.onclick = function () { toggleSelectList(this); };
+        listItem.ondblclick = function () {
+            if (isDir) {
+                navigateTo(fullPath, fileName);
+            } else {
+                openFile(fullPath);
+            }
+        };
+
+        listItem.innerHTML = `
+            <div class="file-name">
+                <span class="file-icon">${icon}</span>
+                <span>${fileName}</span>
+            </div>
+            <div class="file-date">${formatDate(file.modifiedTime)}</div>
+            <div class="file-type">${getFileType(fileName, isDir)}</div>
+            <div class="file-size">${isDir ? '-' : formatFileSize(file.size)}</div>
+        `;
+        listBody.appendChild(listItem);
+    }
+}
+
 /* --- 헬퍼 함수: 파일 크기 포맷 --- */
 function formatFileSize(bytes) {
     if (bytes === 0) return '-';
@@ -494,12 +638,12 @@ async function loadRealFiles(targetPath) {
     if (!result.success) {
         grid.innerHTML = '<div style="padding:20px; color:#999;">폴더를 열 수 없습니다.</div>';
         listBody.innerHTML = '<div style="padding:20px; color:#999;">폴더를 열 수 없습니다.</div>';
+        originalFiles = [];
         return;
     }
 
-    grid.innerHTML = '';
-    listBody.innerHTML = '';
-
+    // 파일 목록 필터링 및 저장
+    originalFiles = [];
     for (const file of result.files) {
         const fileName = file.name;
 
@@ -512,61 +656,15 @@ async function loadRealFiles(targetPath) {
             fileName.endsWith('.lnk')) continue;
 
         const fullPath = await window.api.joinPath(targetPath, fileName);
-        const isDir = file.isDirectory;
 
-        let icon = '📄';
-        if (isDir) icon = '📁';
-        else if (fileName.endsWith('.png') || fileName.endsWith('.jpg')) icon = '🖼️';
-        else if (fileName.endsWith('.pdf')) icon = '📕';
-        else if (fileName.endsWith('.dongin')) icon = '🔒';
-
-        // 그리드 뷰 아이템
-        const gridItem = document.createElement('div');
-        gridItem.className = 'file-card';
-        gridItem.dataset.path = fullPath;
-        gridItem.dataset.isDir = isDir;
-
-        gridItem.onclick = function () { toggleSelect(this); };
-        gridItem.ondblclick = function () {
-            if (isDir) {
-                navigateTo(fullPath, fileName);
-            } else {
-                openFile(fullPath);
-            }
-        };
-
-        gridItem.innerHTML = `
-            <div style="font-size: 40px; margin-bottom: 10px;">${icon}</div>
-            <div style="font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${fileName}</div>
-        `;
-        grid.appendChild(gridItem);
-
-        // 리스트 뷰 아이템
-        const listItem = document.createElement('div');
-        listItem.className = 'file-list-item';
-        listItem.dataset.path = fullPath;
-        listItem.dataset.isDir = isDir;
-
-        listItem.onclick = function () { toggleSelectList(this); };
-        listItem.ondblclick = function () {
-            if (isDir) {
-                navigateTo(fullPath, fileName);
-            } else {
-                openFile(fullPath);
-            }
-        };
-
-        listItem.innerHTML = `
-            <div class="file-name">
-                <span class="file-icon">${icon}</span>
-                <span>${fileName}</span>
-            </div>
-            <div class="file-date">${formatDate(file.modifiedTime)}</div>
-            <div class="file-type">${getFileType(fileName, isDir)}</div>
-            <div class="file-size">${isDir ? '-' : formatFileSize(file.size)}</div>
-        `;
-        listBody.appendChild(listItem);
+        originalFiles.push({
+            ...file,
+            fullPath: fullPath
+        });
     }
+
+    // 파일 목록 렌더링
+    renderFileList();
 }
 
 /* --- 기능: 파일 열기 --- */

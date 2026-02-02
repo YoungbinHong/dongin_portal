@@ -453,10 +453,54 @@ body.dark-theme .view-toggle-btn {
     color: #636e72;
 }
 
+.file-list-header .sortable {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+}
+
+.file-list-header .sortable:hover {
+    color: var(--accent);
+}
+
+.file-list-header .sortable.active {
+    color: var(--accent);
+}
+
+.sort-arrow {
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.sortable.asc .sort-arrow {
+    opacity: 1;
+}
+
+.sortable.asc .sort-arrow::after {
+    content: "▲";
+}
+
+.sortable.desc .sort-arrow {
+    opacity: 1;
+}
+
+.sortable.desc .sort-arrow::after {
+    content: "▼";
+}
+
 body.dark-theme .file-list-header {
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(255, 255, 255, 0.05);
     color: #888888;
+}
+
+body.dark-theme .file-list-header .sortable:hover,
+body.dark-theme .file-list-header .sortable.active {
+    color: var(--accent);
 }
 
 .file-list-item {

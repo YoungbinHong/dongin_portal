@@ -61,10 +61,10 @@
             </div>
             <div class="file-list active" id="fileList">
                 <div class="file-list-header">
-                    <div>이름</div>
-                    <div>수정한 날짜</div>
-                    <div>유형</div>
-                    <div>크기</div>
+                    <div class="sortable" data-sort="name" onclick="toggleSort('name')">이름<span class="sort-arrow"></span></div>
+                    <div class="sortable" data-sort="date" onclick="toggleSort('date')">수정한 날짜<span class="sort-arrow"></span></div>
+                    <div class="sortable" data-sort="type" onclick="toggleSort('type')">유형<span class="sort-arrow"></span></div>
+                    <div class="sortable" data-sort="size" onclick="toggleSort('size')">크기<span class="sort-arrow"></span></div>
                 </div>
                 <div id="fileListBody"></div>
             </div>
