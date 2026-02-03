@@ -1,0 +1,247 @@
+/* === 파일 목록 스타일 === */
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.file-zone {
+    flex: 1;
+    padding: 10px 40px 100px 40px;
+    overflow-y: auto;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 큰 아이콘 그리드 뷰 */
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 25px;
+    padding: 10px;
+}
+
+.file-grid.hidden {
+    display: none;
+}
+
+.file-card {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: 0.2s;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.file-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.file-card.selected {
+    border-color: var(--accent);
+    background: rgba(162, 155, 254, 0.05);
+}
+
+body.dark-theme .file-card {
+    background: rgba(40, 40, 40, 0.9);
+    color: #e8e8e8;
+}
+
+/* 작은 아이콘 그리드 뷰 */
+.file-small-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 10px;
+}
+
+.file-small-grid.hidden {
+    display: none;
+}
+
+.file-card-small {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: 0.2s;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.file-card-small:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05);
+}
+
+.file-card-small.selected {
+    border-color: var(--accent);
+    background: rgba(162, 155, 254, 0.05);
+}
+
+body.dark-theme .file-card-small {
+    background: rgba(40, 40, 40, 0.6);
+    color: #e8e8e8;
+}
+
+/* 리스트 뷰 */
+.file-list {
+    display: none;
+    flex-direction: column;
+    background: var(--glass);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin: 10px;
+}
+
+.file-list.active {
+    display: flex;
+}
+
+.file-list-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 100px;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 12px;
+    font-weight: 600;
+    color: #636e72;
+}
+
+.file-list-header .sortable {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+}
+
+.file-list-header .sortable:hover,
+.file-list-header .sortable.active {
+    color: var(--accent);
+}
+
+.sort-arrow {
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.sortable.asc .sort-arrow {
+    opacity: 1;
+}
+
+.sortable.asc .sort-arrow::after {
+    content: "▲";
+}
+
+.sortable.desc .sort-arrow {
+    opacity: 1;
+}
+
+.sortable.desc .sort-arrow::after {
+    content: "▼";
+}
+
+body.dark-theme .file-list-header {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+    color: #888888;
+}
+
+body.dark-theme .file-list-header .sortable:hover,
+body.dark-theme .file-list-header .sortable.active {
+    color: var(--accent);
+}
+
+.file-list-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 100px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: 0.15s;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.file-list-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-theme .file-list-item {
+    border-color: rgba(255, 255, 255, 0.03);
+}
+
+body.dark-theme .file-list-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.file-list-item.selected {
+    background: rgba(162, 155, 254, 0.1);
+    border-left: 3px solid var(--accent);
+    padding-left: 17px;
+}
+
+.file-list-item .file-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+}
+
+.file-list-item .file-name span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-list-item .file-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.file-list-item .file-date,
+.file-list-item .file-type,
+.file-list-item .file-size {
+    font-size: 13px;
+    color: #636e72;
+}
+
+body.dark-theme .file-list-item .file-date,
+body.dark-theme .file-list-item .file-type,
+body.dark-theme .file-list-item .file-size {
+    color: #888888;
+}
+
+/* 드래그 선택 박스 */
+.selection-box {
+    position: fixed;
+    border: 1px solid var(--accent);
+    background: rgba(162, 155, 254, 0.15);
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+}
+
+.selection-box.active {
+    display: block;
+}

@@ -1,0 +1,58 @@
+/* === CSS 변수 및 다크 테마 === */
+:root {
+    --bg: #f8faff;
+    --sidebar-bg: rgba(255, 255, 255, 0.4);
+    --accent: #a29bfe;
+    --text: #2d3436;
+    --glass: rgba(255, 255, 255, 0.85);
+}
+
+body.dark-theme {
+    --bg: #0f0f0f;
+    --sidebar-bg: rgba(25, 25, 25, 0.7);
+    --accent: #b9a8ff;
+    --text: #e8e8e8;
+    --glass: rgba(25, 25, 25, 0.9);
+}
+
+/* 어두운 테마 추가 스타일 */
+body.dark-theme input,
+body.dark-theme select {
+    background: rgba(50, 50, 50, 0.6) !important;
+    color: #e8e8e8 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-theme input::placeholder {
+    color: #888888;
+}
+
+body.dark-theme [style*="color: #636e72"],
+body.dark-theme [style*="color:#636e72"] {
+    color: #b0b0b0 !important;
+}
+
+body.dark-theme [style*="color: #2d3436"],
+body.dark-theme [style*="color:#2d3436"] {
+    color: #e8e8e8 !important;
+}
+
+body.dark-theme [style*="color: #b2bec3"],
+body.dark-theme [style*="color:#b2bec3"] {
+    color: #888888 !important;
+}
+
+body.dark-theme [style*="color: #dfe6e9"],
+body.dark-theme [style*="color:#dfe6e9"] {
+    color: #555555 !important;
+}
+
+body.dark-theme [style*="background: rgba(0, 0, 0, 0.03)"],
+body.dark-theme [style*="background: rgba(0,0,0,0.03)"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.dark-theme [style*="background: rgba(0, 0, 0, 0.05)"],
+body.dark-theme [style*="background: rgba(0,0,0,0.05)"] {
+    background: rgba(255, 255, 255, 0.08) !important;
+}

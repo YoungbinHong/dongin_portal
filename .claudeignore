@@ -1,5 +1,9 @@
 dist/
 node_modules/
+assets/
+.gitignore
 .git/
 package-lock.json
+package.json
+preload.js
 *.log

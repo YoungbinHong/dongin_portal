@@ -1,0 +1,46 @@
+/* === 하단 액션 바 스타일 === */
+.action-bar {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(45, 52, 54, 0.85);
+    backdrop-filter: blur(15px);
+    padding: 12px 25px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    transition: 0.3s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.action-bar.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+body.dark-theme .action-bar {
+    background: rgba(30, 30, 30, 0.95);
+}
+
+.btn-execute {
+    background: var(--accent);
+    border: none;
+    padding: 8px 20px;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-execute:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}

@@ -1,0 +1,14 @@
+/* === 기본 스타일 === */
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    background: var(--bg);
+    font-family: 'Pretendard', sans-serif;
+    overflow: hidden;
+}
+
+#headerTitle {
+    color: var(--text) !important;
+}

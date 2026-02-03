@@ -1,0 +1,72 @@
+/* === 스크롤바 스타일 === */
+.file-zone::-webkit-scrollbar,
+.preview-content::-webkit-scrollbar,
+.settings-content::-webkit-scrollbar,
+#sidebarMenu::-webkit-scrollbar {
+    width: 8px;
+}
+
+.file-zone::-webkit-scrollbar-track,
+.preview-content::-webkit-scrollbar-track,
+.settings-content::-webkit-scrollbar-track,
+#sidebarMenu::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px 0;
+}
+
+.file-zone::-webkit-scrollbar-thumb,
+.preview-content::-webkit-scrollbar-thumb,
+.settings-content::-webkit-scrollbar-thumb,
+#sidebarMenu::-webkit-scrollbar-thumb {
+    background: rgba(162, 155, 254, 0.3);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.2s;
+}
+
+.file-zone::-webkit-scrollbar-thumb:hover,
+.preview-content::-webkit-scrollbar-thumb:hover,
+.settings-content::-webkit-scrollbar-thumb:hover,
+#sidebarMenu::-webkit-scrollbar-thumb:hover {
+    background: rgba(162, 155, 254, 0.6);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.file-zone::-webkit-scrollbar-thumb:active,
+.preview-content::-webkit-scrollbar-thumb:active,
+.settings-content::-webkit-scrollbar-thumb:active,
+#sidebarMenu::-webkit-scrollbar-thumb:active {
+    background: var(--accent);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* 어두운 테마 스크롤바 */
+body.dark-theme .file-zone::-webkit-scrollbar-thumb,
+body.dark-theme .preview-content::-webkit-scrollbar-thumb,
+body.dark-theme .settings-content::-webkit-scrollbar-thumb,
+body.dark-theme #sidebarMenu::-webkit-scrollbar-thumb {
+    background: rgba(185, 168, 255, 0.25);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+body.dark-theme .file-zone::-webkit-scrollbar-thumb:hover,
+body.dark-theme .preview-content::-webkit-scrollbar-thumb:hover,
+body.dark-theme .settings-content::-webkit-scrollbar-thumb:hover,
+body.dark-theme #sidebarMenu::-webkit-scrollbar-thumb:hover {
+    background: rgba(185, 168, 255, 0.5);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+body.dark-theme .file-zone::-webkit-scrollbar-thumb:active,
+body.dark-theme .preview-content::-webkit-scrollbar-thumb:active,
+body.dark-theme .settings-content::-webkit-scrollbar-thumb:active,
+body.dark-theme #sidebarMenu::-webkit-scrollbar-thumb:active {
+    background: var(--accent);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}

@@ -1,0 +1,198 @@
+/* === 튜토리얼 스타일 === */
+.tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.tutorial-overlay.active {
+    display: flex;
+}
+
+/* 초기 모달 */
+.tutorial-intro-modal {
+    background: var(--glass);
+    padding: 40px;
+    border-radius: 24px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    animation: tutorialPop 0.3s ease;
+    max-width: 320px;
+}
+
+.tutorial-intro-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px auto;
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+}
+
+.tutorial-intro-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.tutorial-intro-desc {
+    font-size: 14px;
+    color: #636e72;
+    margin-bottom: 25px;
+}
+
+body.dark-theme .tutorial-intro-desc {
+    color: #b0b0b0;
+}
+
+.tutorial-intro-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.tutorial-intro-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 5px 15px rgba(162, 155, 254, 0.4);
+}
+
+@keyframes tutorialPop {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 말풍선 툴팁 */
+.tutorial-tooltip {
+    position: fixed;
+    background: var(--glass);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    max-width: 280px;
+    display: none;
+    z-index: 10001;
+    animation: tutorialTooltipPop 0.3s ease;
+}
+
+.tutorial-tooltip.active {
+    display: block;
+}
+
+.tutorial-tooltip-content {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.tutorial-tooltip-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 100%;
+}
+
+.tutorial-tooltip-btn:hover {
+    transform: scale(1.02);
+}
+
+.tutorial-tooltip-arrow {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--glass);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transform: rotate(45deg);
+    z-index: -1;
+}
+
+.tutorial-tooltip-arrow.left {
+    left: -9px;
+    top: 50%;
+    margin-top: -8px;
+    border-right: none;
+    border-top: none;
+}
+
+.tutorial-tooltip-arrow.right {
+    right: -9px;
+    top: 50%;
+    margin-top: -8px;
+    border-left: none;
+    border-bottom: none;
+}
+
+.tutorial-tooltip-arrow.top {
+    top: -9px;
+    left: 50%;
+    margin-left: -8px;
+    border-bottom: none;
+    border-right: none;
+}
+
+.tutorial-tooltip-arrow.bottom {
+    bottom: -9px;
+    left: 50%;
+    margin-left: -8px;
+    border-top: none;
+    border-left: none;
+}
+
+@keyframes tutorialTooltipPop {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 하이라이트 */
+.tutorial-highlight {
+    position: relative;
+    z-index: 10001 !important;
+    box-shadow: 0 0 0 4px var(--accent), 0 0 20px rgba(162, 155, 254, 0.5) !important;
+    border-radius: 12px;
+}
+
+.tutorial-highlight-area {
+    position: relative;
+    z-index: 10001 !important;
+    background: var(--sidebar-bg);
+    box-shadow: 0 0 0 4px var(--accent), 0 0 30px rgba(162, 155, 254, 0.4) !important;
+}

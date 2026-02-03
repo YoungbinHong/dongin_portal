@@ -973,34 +973,99 @@ function cancelTask() {
     }, 100);
 }
 
-/* --- 기능: 암호화/복호화 실행 --- */
-async function handleExecution() {
-    let selectedFiles;
-    if (viewMode === 'grid') {
-        selectedFiles = document.querySelectorAll('.file-card.selected');
-    } else if (viewMode === 'small-grid') {
-        selectedFiles = document.querySelectorAll('.file-card-small.selected');
-    } else {
-        selectedFiles = document.querySelectorAll('.file-list-item.selected');
+/* --- 폴더 내 모든 파일 재귀적으로 수집 --- */
+async function collectFilesFromFolder(folderPath) {
+    const files = [];
+
+    const result = await window.api.readDirectory(folderPath);
+    if (!result.success) {
+        return files;
     }
 
-    if (selectedFiles.length === 0) {
-        showAlertModal('알림', '파일을 선택해주세요.');
+    for (const file of result.files) {
+        const fileName = file.name;
+
+        // 숨김파일, 시스템파일, 임시파일 제외
+        if (fileName.startsWith('.') ||
+            fileName.startsWith('$') ||
+            fileName.startsWith('~$') ||
+            fileName === 'desktop.ini' ||
+            fileName === 'Thumbs.db' ||
+            fileName.endsWith('.lnk')) continue;
+
+        const fullPath = await window.api.joinPath(folderPath, fileName);
+
+        if (file.isDirectory) {
+            // 하위 폴더의 파일들도 재귀적으로 수집
+            const subFiles = await collectFilesFromFolder(fullPath);
+            files.push(...subFiles);
+        } else {
+            files.push({ name: fileName, path: fullPath });
+        }
+    }
+
+    return files;
+}
+
+/* --- 기능: 암호화/복호화 실행 --- */
+async function handleExecution() {
+    let selectedItems;
+    if (viewMode === 'grid') {
+        selectedItems = document.querySelectorAll('.file-card.selected');
+    } else if (viewMode === 'small-grid') {
+        selectedItems = document.querySelectorAll('.file-card-small.selected');
+    } else {
+        selectedItems = document.querySelectorAll('.file-list-item.selected');
+    }
+
+    if (selectedItems.length === 0) {
+        showAlertModal('알림', '파일 또는 폴더를 선택해주세요.');
         return;
     }
 
-    const fileList = Array.from(selectedFiles).map(item => {
+    // 선택된 항목들에서 파일 목록 수집 (폴더인 경우 하위 파일 포함)
+    const fileList = [];
+    let hasFolder = false;
+
+    for (const item of selectedItems) {
         let name;
         if (item.classList.contains('file-card') || item.classList.contains('file-card-small')) {
             name = item.querySelector('div:last-child').innerText;
         } else {
             name = item.querySelector('.file-name span:last-child').innerText;
         }
-        return { name, path: item.dataset.path };
-    });
+
+        const path = item.dataset.path;
+        const isDir = item.dataset.isDir === 'true';
+
+        if (isDir) {
+            hasFolder = true;
+            // 폴더인 경우 하위 파일들을 재귀적으로 수집
+            const folderFiles = await collectFilesFromFolder(path);
+            fileList.push(...folderFiles);
+        } else {
+            fileList.push({ name, path });
+        }
+    }
+
+    if (fileList.length === 0) {
+        showAlertModal('알림', hasFolder ? '선택한 폴더에 파일이 없습니다.' : '파일을 선택해주세요.');
+        return;
+    }
+
+    // 암호화/복호화 방향 결정 (첫 번째 파일 기준)
+    const isEncrypting = !fileList[0].name.endsWith('.dongin');
+
+    // 혼합된 파일 유형 체크 (암호화 파일과 일반 파일이 섞여있는지)
+    const hasMixedTypes = fileList.some(f => f.name.endsWith('.dongin')) &&
+                          fileList.some(f => !f.name.endsWith('.dongin'));
+
+    if (hasMixedTypes) {
+        showAlertModal('알림', '암호화된 파일과 일반 파일을 동시에 처리할 수 없습니다.');
+        return;
+    }
 
     const totalFiles = fileList.length;
-    const isEncrypting = !fileList[0].name.endsWith('.dongin');
 
     isCanceled = false;
     showProgress(
@@ -1009,6 +1074,7 @@ async function handleExecution() {
     );
 
     let processedCount = 0;
+    let errorOccurred = false;
 
     for (const file of fileList) {
         if (isCanceled) {
@@ -1038,11 +1104,12 @@ async function handleExecution() {
             console.error(`오류: ${file.name} 처리 실패`, err);
             hideProgress();
             showAlertModal('오류', `${file.name} 처리 실패\n${err.message}`);
+            errorOccurred = true;
             break;
         }
     }
 
-    if (!isCanceled) {
+    if (!isCanceled && !errorOccurred) {
         updateProgress(100);
         await new Promise(resolve => setTimeout(resolve, 500));
         hideProgress();
