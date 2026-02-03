@@ -473,6 +473,246 @@ body.dark-theme .view-toggle-btn {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* --- 미리보기 토글 버튼 --- */
+.preview-toggle-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+    flex-shrink: 0;
+}
+
+.preview-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.preview-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.preview-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+body.dark-theme .preview-toggle-btn {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .preview-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* --- 콘텐츠 래퍼 (파일 영역 + 미리보기) --- */
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- 미리보기 리사이저 --- */
+.preview-resizer {
+    width: 0;
+    height: 100%;
+    background: transparent;
+    cursor: col-resize;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    display: none;
+}
+
+.preview-resizer.active {
+    width: 6px;
+    display: block;
+}
+
+.preview-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.preview-resizer:hover::before,
+.preview-resizer.dragging::before {
+    background: var(--accent);
+}
+
+.preview-resizer.dragging {
+    background: rgba(162, 155, 254, 0.1);
+}
+
+/* --- 미리보기 패널 --- */
+.preview-pane {
+    width: 0;
+    min-width: 0;
+    background: var(--glass);
+    border-left: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.3s ease, min-width 0.3s ease;
+}
+
+.preview-pane.active {
+    width: 350px;
+    min-width: 200px;
+    transition: none;
+}
+
+.preview-pane.resizing {
+    transition: none;
+}
+
+.preview-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.preview-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: auto;
+}
+
+.preview-placeholder {
+    text-align: center;
+    color: #b2bec3;
+}
+
+.preview-placeholder svg {
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.preview-placeholder p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.preview-placeholder .preview-supported {
+    font-size: 12px;
+    margin-top: 10px;
+    opacity: 0.7;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.preview-pdf {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 8px;
+}
+
+.preview-unsupported {
+    text-align: center;
+    color: #636e72;
+}
+
+.preview-unsupported svg {
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.preview-unsupported p {
+    font-size: 14px;
+    margin: 0;
+}
+
+.preview-file-info {
+    text-align: center;
+    padding: 20px;
+}
+
+.preview-file-icon {
+    font-size: 64px;
+    margin-bottom: 15px;
+}
+
+.preview-file-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-all;
+    margin-bottom: 10px;
+}
+
+.preview-file-details {
+    font-size: 12px;
+    color: #636e72;
+    line-height: 1.8;
+}
+
+body.dark-theme .preview-pane {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .preview-header {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .preview-placeholder {
+    color: #888888;
+}
+
+body.dark-theme .preview-unsupported {
+    color: #888888;
+}
+
+body.dark-theme .preview-file-details {
+    color: #888888;
+}
+
+.preview-placeholder .loading-spinner {
+    animation: preview-spin 1s linear infinite;
+}
+
+@keyframes preview-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* --- 자세히 보기 (리스트 뷰) --- */
 .file-list {
     display: none;

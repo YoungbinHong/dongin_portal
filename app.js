@@ -8,6 +8,9 @@ let lastActivityTime = Date.now();
 let homePath = '';
 let pathSep = '\\';
 let viewMode = 'list'; // 'grid', 'small-grid', 'list' (기본: 자세히)
+let previewEnabled = false; // 미리보기 패널 활성화 상태
+const DEFAULT_PREVIEW_WIDTH = 350; // 미리보기 패널 기본 너비
+const MIN_PREVIEW_WIDTH = 200; // 미리보기 패널 최소 너비
 let currentSort = null; // 'name', 'date', 'type', 'size' 또는 null
 let sortDirection = null; // 'asc', 'desc' 또는 null
 let originalFiles = []; // 정렬 전 원본 파일 목록
@@ -210,6 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadSavedTheme();
     loadSavedViewMode();
+    loadSavedPreviewState();
     loadNoticeSettings();
     loadAutoLogoutSetting();
     await initSidebar();
@@ -233,12 +237,14 @@ function initDragSelection() {
 
     // 메인 컨테이너(오른쪽 페인) 전체에서 드래그 시작 가능
     mainContainer.addEventListener('mousedown', (e) => {
-        // 버튼, 액션바, 헤더, 스크롤바 클릭 시 무시
+        // 버튼, 액션바, 헤더, 스크롤바, 미리보기 페인, 리사이저 클릭 시 무시
         if (e.target.closest('.action-bar') ||
             e.target.closest('button') ||
             e.target.closest('.file-list-header') ||
             e.target.closest('input') ||
-            e.target.closest('select')) {
+            e.target.closest('select') ||
+            e.target.closest('.preview-pane') ||
+            e.target.closest('.preview-resizer')) {
             return;
         }
 
@@ -1256,6 +1262,9 @@ function updateBar() {
             actionBar.classList.remove('show');
         }
     }
+
+    // 미리보기 업데이트
+    updatePreview();
 }
 
 /* --- 삭제 기능 --- */
@@ -1471,4 +1480,313 @@ async function toggleAutoStart(enabled) {
     } else {
         console.log(enabled ? '자동 실행 등록 완료' : '자동 실행 해제 완료');
     }
+}
+
+/* --- 미리보기 패널 기능 --- */
+function togglePreview() {
+    const previewPane = document.getElementById('previewPane');
+    const previewBtn = document.getElementById('previewToggleBtn');
+    const previewResizer = document.getElementById('previewResizer');
+
+    previewEnabled = !previewEnabled;
+
+    if (previewEnabled) {
+        // 버튼으로 켜면 항상 기본 크기로 복원
+        previewPane.style.width = DEFAULT_PREVIEW_WIDTH + 'px';
+        previewPane.classList.add('active');
+        previewBtn.classList.add('active');
+        previewResizer.classList.add('active');
+        localStorage.setItem('preview-enabled', 'true');
+        updatePreview();
+    } else {
+        previewPane.classList.remove('active');
+        previewBtn.classList.remove('active');
+        previewResizer.classList.remove('active');
+        previewPane.style.width = '';
+        localStorage.setItem('preview-enabled', 'false');
+    }
+}
+
+function loadSavedPreviewState() {
+    const saved = localStorage.getItem('preview-enabled');
+    const previewPane = document.getElementById('previewPane');
+    const previewBtn = document.getElementById('previewToggleBtn');
+    const previewResizer = document.getElementById('previewResizer');
+
+    if (saved === 'true') {
+        previewEnabled = true;
+        previewPane.style.width = DEFAULT_PREVIEW_WIDTH + 'px';
+        previewPane.classList.add('active');
+        previewBtn.classList.add('active');
+        previewResizer.classList.add('active');
+    }
+
+    // 리사이저 드래그 초기화
+    initPreviewResizer();
+}
+
+/* --- 미리보기 리사이저 드래그 기능 --- */
+function initPreviewResizer() {
+    const resizer = document.getElementById('previewResizer');
+    const previewPane = document.getElementById('previewPane');
+    const contentWrapper = document.getElementById('contentWrapper');
+
+    if (!resizer || !previewPane || !contentWrapper) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+        if (!previewEnabled) return;
+
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = previewPane.offsetWidth;
+
+        resizer.classList.add('dragging');
+        previewPane.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaX = startX - e.clientX;
+        let newWidth = startWidth + deltaX;
+
+        // 최소/최대 너비 제한
+        const maxWidth = contentWrapper.offsetWidth / 2;
+        newWidth = Math.max(MIN_PREVIEW_WIDTH, Math.min(newWidth, maxWidth));
+
+        previewPane.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isResizing) return;
+
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        previewPane.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+}
+
+// 지원되는 미리보기 확장자
+const previewableImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'ico', 'svg'];
+const previewablePdfExtensions = ['pdf'];
+
+function isPreviewableImage(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    return previewableImageExtensions.includes(ext);
+}
+
+function isPreviewablePdf(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    return previewablePdfExtensions.includes(ext);
+}
+
+function isPreviewable(fileName) {
+    return isPreviewableImage(fileName) || isPreviewablePdf(fileName);
+}
+
+async function updatePreview() {
+    if (!previewEnabled) return;
+
+    const previewContent = document.getElementById('previewContent');
+    if (!previewContent) return;
+
+    // 현재 선택된 파일 가져오기
+    let selectedFiles;
+    if (viewMode === 'grid') {
+        selectedFiles = document.querySelectorAll('.file-card.selected');
+    } else if (viewMode === 'small-grid') {
+        selectedFiles = document.querySelectorAll('.file-card-small.selected');
+    } else {
+        selectedFiles = document.querySelectorAll('.file-list-item.selected');
+    }
+
+    // 선택된 파일이 없거나 여러 개인 경우
+    if (selectedFiles.length === 0) {
+        showPreviewPlaceholder();
+        return;
+    }
+
+    if (selectedFiles.length > 1) {
+        showMultipleSelection(selectedFiles.length);
+        return;
+    }
+
+    // 단일 파일 선택
+    const selectedItem = selectedFiles[0];
+    const filePath = selectedItem.dataset.path;
+    const isDir = selectedItem.dataset.isDir === 'true';
+
+    // 파일 이름 가져오기
+    let fileName;
+    if (selectedItem.classList.contains('file-card') || selectedItem.classList.contains('file-card-small')) {
+        fileName = selectedItem.querySelector('div:last-child').innerText;
+    } else {
+        fileName = selectedItem.querySelector('.file-name span:last-child').innerText;
+    }
+
+    // 폴더인 경우
+    if (isDir) {
+        showFolderPreview(fileName);
+        return;
+    }
+
+    // 이미지 파일인 경우
+    if (isPreviewableImage(fileName)) {
+        showImagePreview(fileName, filePath);
+        return;
+    }
+
+    // PDF 파일인 경우
+    if (isPreviewablePdf(fileName)) {
+        showPdfPreview(fileName, filePath);
+        return;
+    }
+
+    // 미리보기가 지원되지 않는 파일
+    showFileInfo(fileName, filePath);
+}
+
+function showPreviewPlaceholder() {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = `
+        <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+                <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2h5v-5h-5v5z"/>
+            </svg>
+            <p>파일을 선택하면<br>미리 보기가 표시됩니다.</p>
+            <p class="preview-supported">지원: 이미지, PDF</p>
+        </div>
+    `;
+}
+
+function showMultipleSelection(count) {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = `
+        <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+                <path fill="currentColor" d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/>
+            </svg>
+            <p>${count}개 항목 선택됨</p>
+        </div>
+    `;
+}
+
+function showFolderPreview(folderName) {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = `
+        <div class="preview-file-info">
+            <div class="preview-file-icon">📁</div>
+            <div class="preview-file-name">${folderName}</div>
+            <div class="preview-file-details">
+                폴더
+            </div>
+        </div>
+    `;
+}
+
+async function showImagePreview(fileName, filePath) {
+    const previewContent = document.getElementById('previewContent');
+
+    // 로딩 표시
+    previewContent.innerHTML = `
+        <div class="preview-placeholder">
+            <svg viewBox="0 0 24 24" width="48" height="48" class="loading-spinner">
+                <path fill="currentColor" d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/>
+            </svg>
+            <p>로딩 중...</p>
+        </div>
+    `;
+
+    try {
+        // 파일 경로를 file:// URL로 변환
+        const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
+
+        previewContent.innerHTML = `
+            <img class="preview-image" src="${fileUrl}" alt="${fileName}"
+                 onerror="showImageError('${fileName.replace(/'/g, "\\'")}')"/>
+        `;
+    } catch (err) {
+        console.error('이미지 미리보기 오류:', err);
+        showFileInfo(fileName, filePath);
+    }
+}
+
+function showImageError(fileName) {
+    const previewContent = document.getElementById('previewContent');
+    previewContent.innerHTML = `
+        <div class="preview-unsupported">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+                <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+            </svg>
+            <p>이미지를 불러올 수 없습니다.</p>
+            <p style="font-size: 12px; margin-top: 5px; opacity: 0.7;">${fileName}</p>
+        </div>
+    `;
+}
+
+async function showPdfPreview(fileName, filePath) {
+    const previewContent = document.getElementById('previewContent');
+
+    try {
+        // 파일 경로를 file:// URL로 변환
+        const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
+
+        previewContent.innerHTML = `
+            <iframe class="preview-pdf" src="${fileUrl}" title="${fileName}"></iframe>
+        `;
+    } catch (err) {
+        console.error('PDF 미리보기 오류:', err);
+        showFileInfo(fileName, filePath);
+    }
+}
+
+async function showFileInfo(fileName, filePath) {
+    const previewContent = document.getElementById('previewContent');
+
+    // 파일 정보 가져오기
+    let fileInfo = null;
+    for (const file of originalFiles) {
+        if (file.fullPath === filePath) {
+            fileInfo = file;
+            break;
+        }
+    }
+
+    // 아이콘 결정
+    let icon = '📄';
+    if (fileName.endsWith('.dongin')) icon = '🔒';
+    else if (fileName.endsWith('.txt')) icon = '📝';
+    else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) icon = '📘';
+    else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) icon = '📗';
+    else if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) icon = '📙';
+    else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) icon = '📦';
+    else if (fileName.endsWith('.mp3') || fileName.endsWith('.wav')) icon = '🎵';
+    else if (fileName.endsWith('.mp4') || fileName.endsWith('.avi')) icon = '🎬';
+    else if (fileName.endsWith('.exe')) icon = '⚙️';
+
+    const fileType = getFileType(fileName, false);
+    const fileSize = fileInfo ? formatFileSize(fileInfo.size) : '-';
+    const modifiedDate = fileInfo ? formatDate(fileInfo.modifiedTime) : '-';
+
+    previewContent.innerHTML = `
+        <div class="preview-file-info">
+            <div class="preview-file-icon">${icon}</div>
+            <div class="preview-file-name">${fileName}</div>
+            <div class="preview-file-details">
+                유형: ${fileType}<br>
+                크기: ${fileSize}<br>
+                수정한 날짜: ${modifiedDate}
+            </div>
+        </div>
+    `;
 }
