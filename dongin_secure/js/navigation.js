@@ -35,6 +35,14 @@ function goBack() {
     updateSidebarActive();
 }
 
+function goToMenu() {
+    const overlay = document.getElementById('logoutOverlay');
+    overlay.classList.add('active');
+    setTimeout(() => {
+        window.location.href = '../menu.html';
+    }, 400);
+}
+
 function updateSidebarActive() {
     const navItems = document.querySelectorAll('.nav-item');
     let found = false;

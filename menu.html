@@ -130,6 +130,19 @@
             color: #6c5ce7;
         }
 
+        .card-pdf .card-icon {
+            background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+        }
+
+        .card-pdf .card-subtitle {
+            color: #ff7675;
+        }
+
+        .card-pdf .card-badge {
+            background: rgba(255, 118, 117, 0.15);
+            color: #d63031;
+        }
+
         .card-coming .card-icon {
             background: linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%);
         }
@@ -333,6 +346,194 @@
             opacity: 1;
             pointer-events: auto;
         }
+
+        .settings-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+
+        .settings-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #636e72;
+        }
+
+        .settings-modal {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            width: 500px;
+            max-width: 90vw;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .settings-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3436;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #636e72;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-body {
+            padding: 25px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 10px;
+        }
+
+        .setting-group select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+
+        body.dark-theme {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body.dark-theme .header h1 span:first-child {
+            color: #ffffff;
+        }
+
+        body.dark-theme .header p {
+            color: #888;
+        }
+
+        body.dark-theme .program-card {
+            background: rgba(40, 40, 60, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .card-title {
+            color: #ffffff;
+        }
+
+        body.dark-theme .card-desc {
+            color: #aaa;
+        }
+
+        body.dark-theme .logout-btn,
+        body.dark-theme .settings-btn {
+            background: rgba(40, 40, 60, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .logout-btn svg,
+        body.dark-theme .settings-btn svg {
+            fill: #b0b0b0;
+        }
+
+        body.dark-theme .server-status {
+            background: rgba(40, 40, 60, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .server-status-text {
+            color: #b0b0b0;
+        }
+
+        body.dark-theme .settings-modal {
+            background: #1e1e2e;
+        }
+
+        body.dark-theme .settings-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-theme .settings-header h2 {
+            color: #ffffff;
+        }
+
+        body.dark-theme .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #b0b0b0;
+        }
+
+        body.dark-theme .setting-label {
+            color: #ffffff;
+        }
+
+        body.dark-theme .setting-group select {
+            background: #2a2a3e;
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        body.dark-theme .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        body.dark-theme .alert-modal {
+            background: #1e1e2e;
+        }
+
+        body.dark-theme .alert-modal div:first-child {
+            color: #ffffff;
+        }
+
+        body.dark-theme .logout-overlay {
+            background: #1a1a2e;
+        }
+
+        body.dark-theme .page-transition {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
     </style>
 </head>
 
@@ -340,6 +541,12 @@
     <div class="logout-btn" onclick="logout()" title="로그아웃">
         <svg viewBox="0 0 24 24">
             <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+        </svg>
+    </div>
+
+    <div class="settings-btn" onclick="openSettings()" title="설정">
+        <svg viewBox="0 0 24 24">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
         </svg>
     </div>
 
@@ -364,17 +571,17 @@
             <div class="card-badge">v0.1.0</div>
         </a>
 
-        <div class="program-card card-coming">
+        <a href="dongin_pdf_editor/app.html" class="program-card card-pdf">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/>
                 </svg>
             </div>
-            <div class="card-title">DONGIN DOCS</div>
-            <div class="card-subtitle">문서 관리</div>
-            <div class="card-desc">문서를 체계적으로 관리하고 공유하세요</div>
-            <div class="card-badge">Coming Soon</div>
-        </div>
+            <div class="card-title">DONGIN PDF EDITOR</div>
+            <div class="card-subtitle">PDF 편집 도구</div>
+            <div class="card-desc">PDF 압축, 분할, 병합을 간편하게 처리하세요</div>
+            <div class="card-badge">v0.1.0</div>
+        </a>
 
         <div class="program-card card-coming">
             <div class="card-icon">
@@ -396,12 +603,12 @@
 
     <div class="page-transition" id="pageTransition">
         <div class="page-transition-content">
-            <div class="transition-icon">
+            <div class="transition-icon" id="transitionIcon">
                 <svg viewBox="0 0 24 24">
                     <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
                 </svg>
             </div>
-            <div class="transition-title">DONGIN SECURE</div>
+            <div class="transition-title" id="transitionTitle">DONGIN SECURE</div>
             <div class="transition-loader">
                 <div class="transition-loader-bar" id="loaderBar"></div>
             </div>
@@ -410,15 +617,31 @@
 
     <div id="modalOverlay" class="modal-overlay">
         <div id="logoutContent" class="alert-modal">
-            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: #2d3436;">로그아웃</div>
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px;">로그아웃</div>
             <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">로그아웃하시겠습니까?</div>
             <div style="display: flex; gap: 10px;">
                 <button
-                    style="flex: 1; background: rgba(0,0,0,0.05); color: #2d3436; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
+                    style="flex: 1; background: rgba(0,0,0,0.05); color: inherit; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
                     onclick="closeModal()">취소</button>
                 <button
                     style="flex: 1; background: #a29bfe; color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;"
                     onclick="confirmLogout()">확인</button>
+            </div>
+        </div>
+
+        <div id="settingsContent" class="settings-modal">
+            <div class="settings-header">
+                <h2>설정</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-group">
+                    <label class="setting-label">테마 설정</label>
+                    <select id="themeSelect" onchange="applyTheme(this.value)">
+                        <option value="light">밝은 테마 (기본)</option>
+                        <option value="dark">어두운 테마</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -426,12 +649,43 @@
     <div id="logoutOverlay" class="logout-overlay"></div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedTheme();
+        });
+
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('donginTheme') || 'light';
+            applyTheme(savedTheme);
+            const themeSelect = document.getElementById('themeSelect');
+            if (themeSelect) themeSelect.value = savedTheme;
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+            } else {
+                document.body.classList.remove('dark-theme');
+            }
+            localStorage.setItem('donginTheme', theme);
+        }
+
+        function openSettings() {
+            document.querySelectorAll('.alert-modal, .settings-modal').forEach(el => el.style.display = 'none');
+            document.getElementById('settingsContent').style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'flex';
+            const themeSelect = document.getElementById('themeSelect');
+            if (themeSelect) themeSelect.value = localStorage.getItem('donginTheme') || 'light';
+        }
+
         function logout() {
+            document.querySelectorAll('.alert-modal, .settings-modal').forEach(el => el.style.display = 'none');
+            document.getElementById('logoutContent').style.display = 'block';
             document.getElementById('modalOverlay').style.display = 'flex';
         }
 
         function closeModal() {
             document.getElementById('modalOverlay').style.display = 'none';
+            document.querySelectorAll('.alert-modal, .settings-modal').forEach(el => el.style.display = 'none');
         }
 
         function confirmLogout() {
@@ -443,12 +697,34 @@
             }, 600);
         }
 
-        document.querySelectorAll('.program-card.card-secure').forEach(card => {
+        const transitionConfigs = {
+            'card-secure': {
+                icon: '<svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>',
+                title: 'DONGIN SECURE',
+                gradient: 'linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%)'
+            },
+            'card-pdf': {
+                icon: '<svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>',
+                title: 'DONGIN PDF EDITOR',
+                gradient: 'linear-gradient(135deg, #ff7675 0%, #d63031 100%)'
+            }
+        };
+
+        document.querySelectorAll('.program-card.card-secure, .program-card.card-pdf').forEach(card => {
             card.addEventListener('click', function(e) {
                 e.preventDefault();
                 const href = this.getAttribute('href');
                 const transition = document.getElementById('pageTransition');
                 const loaderBar = document.getElementById('loaderBar');
+                const transitionIcon = document.getElementById('transitionIcon');
+                const transitionTitle = document.getElementById('transitionTitle');
+
+                const cardType = this.classList.contains('card-pdf') ? 'card-pdf' : 'card-secure';
+                const config = transitionConfigs[cardType];
+
+                transitionIcon.innerHTML = config.icon;
+                transitionTitle.textContent = config.title;
+                transition.style.background = config.gradient;
 
                 transition.classList.add('active');
 

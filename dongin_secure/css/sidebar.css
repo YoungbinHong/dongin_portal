@@ -13,10 +13,16 @@
 }
 
 .logo-area {
-    padding: 20px 15px 40px 15px;
+    padding: 20px 15px 30px 15px;
     display: flex;
     align-items: center;
     gap: 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 10px;
+}
+
+body.dark-theme .logo-area {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .logo-main {
@@ -137,4 +143,8 @@ body.dark-theme .footer-icon {
 
 body.dark-theme .footer-icon:hover {
     color: #b9a8ff;
+}
+
+body.dark-theme .sidebar-footer {
+    border-top-color: rgba(255, 255, 255, 0.1);
 }

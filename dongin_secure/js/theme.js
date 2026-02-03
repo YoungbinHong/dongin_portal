@@ -2,15 +2,15 @@
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.body.classList.add('dark-theme');
-        localStorage.setItem('app-theme', 'dark');
+        localStorage.setItem('donginTheme', 'dark');
     } else {
         document.body.classList.remove('dark-theme');
-        localStorage.setItem('app-theme', 'light');
+        localStorage.setItem('donginTheme', 'light');
     }
 }
 
 function loadSavedTheme() {
-    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    const savedTheme = localStorage.getItem('donginTheme') || 'light';
     const themeSelect = document.getElementById('themeSelect');
 
     applyTheme(savedTheme);

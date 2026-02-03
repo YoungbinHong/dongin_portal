@@ -32,6 +32,11 @@
         <div id="sidebarMenu" style="flex: 1; overflow-y: auto;"></div>
 
         <div class="sidebar-footer">
+            <div class="footer-icon" onclick="goToMenu()" title="메뉴로 돌아가기">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
             <div class="footer-icon" onclick="openSettings()" title="설정">
                 <svg viewBox="0 0 24 24">
                     <path
@@ -211,7 +216,7 @@
                     </div>
                     <div class="setting-group">
                         <label class="setting-label">윈도우 시작 시 자동 실행</label>
-                        <input type="checkbox" id="autoStartCheckbox" onchange="toggleAutoStart(this.checked)"> <span style="font-size: 13px;">컴퓨터를 켜면 바로 DONGIN SECURE를
+                        <input type="checkbox" id="autoStartCheckbox" onchange="toggleAutoStart(this.checked)"> <span style="font-size: 13px;">컴퓨터를 켜면 바로 DONGIN PORTAL을
                             실행합니다.</span>
                     </div>
                 </div>
@@ -259,7 +264,7 @@
                     <div class="settings-title">프로그램 정보</div>
                     <div class="setting-group">
                         <label class="setting-label">프로그램 이름</label>
-                        <div style="font-size: 14px; color: #636e72;">DONGIN SECURE v0.1.0</div>
+                        <div style="font-size: 14px; color: #636e72;">DONGIN PORTAL v0.1.0</div>
                     </div>
                     <div class="setting-group">
                         <label class="setting-label">버전 상태</label>

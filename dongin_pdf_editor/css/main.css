@@ -1,0 +1,341 @@
+.main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 50px;
+    overflow-y: auto;
+}
+
+.tool-header {
+    margin-bottom: 40px;
+}
+
+.tool-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.tool-header p {
+    font-size: 14px;
+    color: #636e72;
+}
+
+.tool-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.drop-zone {
+    width: 100%;
+    max-width: 600px;
+    min-height: 280px;
+    background: var(--glass);
+    border: 2px dashed rgba(255, 118, 117, 0.3);
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.drop-zone:hover {
+    border-color: var(--accent);
+    background: rgba(255, 118, 117, 0.03);
+}
+
+.drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(255, 118, 117, 0.08);
+    transform: scale(1.02);
+}
+
+.drop-icon svg {
+    width: 64px;
+    height: 64px;
+    fill: var(--accent);
+    opacity: 0.6;
+}
+
+.drop-text {
+    font-size: 15px;
+    color: #636e72;
+}
+
+.select-btn {
+    padding: 12px 28px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.select-btn:hover {
+    background: var(--accent-dark);
+    transform: translateY(-2px);
+}
+
+.file-list-container {
+    width: 100%;
+    max-width: 600px;
+    background: var(--glass);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.file-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.file-list-header span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.add-more-btn {
+    padding: 8px 16px;
+    background: rgba(255, 118, 117, 0.1);
+    color: var(--accent);
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-more-btn:hover {
+    background: rgba(255, 118, 117, 0.2);
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.file-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.file-item.dragging {
+    opacity: 0.5;
+    background: rgba(255, 118, 117, 0.1);
+}
+
+.file-item-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-item-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+.file-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-item-size {
+    font-size: 12px;
+    color: #b2bec3;
+    margin-top: 2px;
+}
+
+.file-item-remove {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-item-remove:hover {
+    background: rgba(255, 118, 117, 0.1);
+}
+
+.file-item-remove svg {
+    width: 18px;
+    height: 18px;
+    fill: #b2bec3;
+}
+
+.file-item-remove:hover svg {
+    fill: var(--accent);
+}
+
+.options-panel {
+    width: 100%;
+    max-width: 600px;
+}
+
+.tool-options {
+    background: var(--glass);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.option-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.option-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.option-card {
+    flex: 1;
+    min-width: 150px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.02);
+    border: 2px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.option-card input {
+    display: none;
+}
+
+.option-card:hover {
+    background: rgba(255, 118, 117, 0.05);
+}
+
+.option-card.active {
+    border-color: var(--accent);
+    background: rgba(255, 118, 117, 0.08);
+}
+
+.option-icon {
+    margin-bottom: 12px;
+}
+
+.option-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--accent);
+}
+
+.option-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.option-desc {
+    font-size: 12px;
+    color: #b2bec3;
+}
+
+.option-hint {
+    font-size: 13px;
+    color: #b2bec3;
+    margin-top: -8px;
+}
+
+.range-input-group {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.range-input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.range-input-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.range-input-group input:focus {
+    border-color: var(--accent);
+}
+
+.execute-btn {
+    padding: 16px 48px;
+    background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(255, 118, 117, 0.3);
+}
+
+.execute-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(255, 118, 117, 0.4);
+}
+
+.execute-btn:active {
+    transform: translateY(0);
+}
