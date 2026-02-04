@@ -20,6 +20,9 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/dongin_portal
     depends_on:
       - db
+    volumes:
+      - .:/app
+    command: uvicorn main:app --host 0.0.0.0 --reload
 
 volumes:
   postgres_data:
