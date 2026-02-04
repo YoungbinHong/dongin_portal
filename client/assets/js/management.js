@@ -1,34 +1,75 @@
+const API_BASE = 'http://localhost:8000';
 let accounts = [];
 let deletingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
-    loadAccounts();
-    renderAccounts();
+    checkAuth();
 });
 
+function getToken() {
+    return localStorage.getItem('access_token');
+}
+
+async function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error();
+        const user = await res.json();
+        if (user.role !== 'admin') {
+            alert('관리자 권한이 필요합니다.');
+            window.location.href = 'index.html';
+            return;
+        }
+        loadAccounts();
+    } catch {
+        localStorage.removeItem('access_token');
+        window.location.href = 'login.html';
+    }
+}
+
 function loadSavedTheme() {
-    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    const savedTheme = localStorage.getItem('donginTheme') || 'light';
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-theme');
     }
 }
 
-function loadAccounts() {
-    const saved = localStorage.getItem('portal-accounts');
-    if (saved) {
-        accounts = JSON.parse(saved);
-    } else {
-        accounts = [
-            { id: 1, email: 'admin', password: 'admin', name: '관리자', type: 'admin' },
-            { id: 2, email: 'user', password: '1234', name: '사용자', type: 'user' }
-        ];
-        saveAccounts();
+async function loadAccounts() {
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error();
+        accounts = await res.json();
+        renderAccounts();
+        updateServerStatus(true);
+    } catch {
+        updateServerStatus(false);
     }
 }
 
-function saveAccounts() {
-    localStorage.setItem('portal-accounts', JSON.stringify(accounts));
+function updateServerStatus(connected) {
+    const dot = document.querySelector('.server-status-dot');
+    const text = document.querySelector('.server-status-text');
+    const tooltip = document.querySelector('.server-tooltip');
+    if (connected) {
+        dot.style.background = '#00b894';
+        text.textContent = '연결됨';
+        tooltip.textContent = '서버와 연결되었습니다.';
+    } else {
+        dot.style.background = '#ff7675';
+        text.textContent = '연결 끊김';
+        tooltip.textContent = '서버와 연결할 수 없습니다.';
+    }
 }
 
 function renderAccounts() {
@@ -37,8 +78,8 @@ function renderAccounts() {
     const adminCount = document.getElementById('adminCount');
     const userCount = document.getElementById('userCount');
 
-    const admins = accounts.filter(a => a.type === 'admin');
-    const users = accounts.filter(a => a.type === 'user');
+    const admins = accounts.filter(a => a.role === 'admin');
+    const users = accounts.filter(a => a.role === 'user');
 
     adminCount.textContent = admins.length;
     userCount.textContent = users.length;
@@ -48,16 +89,18 @@ function renderAccounts() {
 }
 
 function createAccountItem(account) {
+    const statusClass = account.is_active ? '' : 'inactive';
+    const statusBadge = account.is_active ? '' : '<span class="status-badge">비활성</span>';
     return `
-        <div class="account-item">
+        <div class="account-item ${statusClass}">
             <div class="account-avatar">
                 <svg viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                 </svg>
             </div>
             <div class="account-info">
-                <div class="account-name">${account.name}</div>
-                <div class="account-email">${account.email}</div>
+                <div class="account-name">${account.name} ${statusBadge}</div>
+                <div class="account-email">${account.username} · ${account.position}</div>
             </div>
             <div class="account-actions">
                 <button class="action-btn edit-btn" onclick="openEditModal(${account.id})" title="수정">
@@ -89,11 +132,12 @@ function createEmptyState() {
 function openAddModal() {
     document.getElementById('formTitle').textContent = '계정 추가';
     document.getElementById('editingId').value = '';
-    document.getElementById('accountEmail').value = '';
+    document.getElementById('accountUsername').value = '';
     document.getElementById('accountPassword').value = '';
+    document.getElementById('accountPassword').placeholder = '비밀번호 입력 (8자 이상)';
     document.getElementById('accountName').value = '';
+    document.getElementById('accountPosition').value = '';
     document.getElementById('accountType').value = 'user';
-
     showModal('addAccountContent');
 }
 
@@ -103,39 +147,79 @@ function openEditModal(id) {
 
     document.getElementById('formTitle').textContent = '계정 수정';
     document.getElementById('editingId').value = id;
-    document.getElementById('accountEmail').value = account.email;
-    document.getElementById('accountPassword').value = account.password;
+    document.getElementById('accountUsername').value = account.username;
+    document.getElementById('accountPassword').value = '';
+    document.getElementById('accountPassword').placeholder = '변경시에만 입력';
     document.getElementById('accountName').value = account.name;
-    document.getElementById('accountType').value = account.type;
-
+    document.getElementById('accountPosition').value = account.position;
+    document.getElementById('accountType').value = account.role;
     showModal('addAccountContent');
 }
 
-function saveAccount() {
+async function saveAccount() {
     const id = document.getElementById('editingId').value;
-    const email = document.getElementById('accountEmail').value.trim();
+    const username = document.getElementById('accountUsername').value.trim();
     const password = document.getElementById('accountPassword').value.trim();
     const name = document.getElementById('accountName').value.trim();
-    const type = document.getElementById('accountType').value;
+    const position = document.getElementById('accountPosition').value.trim();
+    const role = document.getElementById('accountType').value;
 
-    if (!email || !password || !name) {
+    if (!username || !name || !position) {
         alert('모든 필드를 입력해주세요.');
         return;
     }
 
-    if (id) {
-        const index = accounts.findIndex(a => a.id === parseInt(id));
-        if (index !== -1) {
-            accounts[index] = { ...accounts[index], email, password, name, type };
-        }
-    } else {
-        const newId = accounts.length ? Math.max(...accounts.map(a => a.id)) + 1 : 1;
-        accounts.push({ id: newId, email, password, name, type });
+    if (!id && (!password || password.length < 8)) {
+        alert('비밀번호는 8자 이상이어야 합니다.');
+        return;
     }
 
-    saveAccounts();
-    renderAccounts();
-    closeModal();
+    if (username.length < 3) {
+        alert('사용자명은 3자 이상이어야 합니다.');
+        return;
+    }
+
+    const token = getToken();
+    try {
+        if (id) {
+            const updateData = { name, position, role };
+            const res = await fetch(`${API_BASE}/api/users/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updateData)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || '수정 실패');
+            }
+            if (password && password.length >= 8) {
+                await fetch(`${API_BASE}/api/users/${id}/password?new_password=${encodeURIComponent(password)}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
+        } else {
+            const res = await fetch(`${API_BASE}/api/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ username, password, name, position, role })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || '생성 실패');
+            }
+        }
+        await loadAccounts();
+        closeModal();
+    } catch (e) {
+        alert(e.message);
+    }
 }
 
 function openDeleteModal(id) {
@@ -147,14 +231,24 @@ function openDeleteModal(id) {
     showModal('deleteContent');
 }
 
-function confirmDelete() {
-    if (deletingId) {
-        accounts = accounts.filter(a => a.id !== deletingId);
-        saveAccounts();
-        renderAccounts();
+async function confirmDelete() {
+    if (!deletingId) return;
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/users/${deletingId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '삭제 실패');
+        }
+        await loadAccounts();
         deletingId = null;
+        closeModal();
+    } catch (e) {
+        alert(e.message);
     }
-    closeModal();
 }
 
 function showModal(contentId) {
@@ -174,9 +268,10 @@ function logout() {
 
 function confirmLogout() {
     closeModal();
+    localStorage.removeItem('access_token');
     const overlay = document.getElementById('logoutOverlay');
     overlay.classList.add('active');
     setTimeout(() => {
         window.location.href = 'login.html';
-    }, 1800);
+    }, 800);
 }

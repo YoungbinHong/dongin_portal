@@ -1,3 +1,5 @@
+const API_BASE = 'http://localhost:8000';
+
 (function() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('from') === 'logout') {
@@ -7,43 +9,60 @@
     }
 })();
 
-function checkLogin() {
-    const email = document.getElementById('email').value;
+async function checkLogin() {
+    const username = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const btn = document.querySelector('button');
+    const errorBox = document.getElementById('errorBox');
 
-    const accounts = JSON.parse(localStorage.getItem('portal-accounts') || '[]');
-    let account = accounts.find(a => a.email === email && a.password === password);
-
-    if (!account && email === 'user' && password === '1234') {
-        account = { type: 'user' };
-    }
-    if (!account && email === 'admin' && password === '1234') {
-        account = { type: 'admin' };
-    }
-
-    if (account) {
-        const errorBox = document.getElementById('errorBox');
+    if (!username || !password) {
         errorBox.classList.remove('show');
-        btn.classList.add('loading');
+        void errorBox.offsetWidth;
+        errorBox.classList.add('show');
+        return;
+    }
 
-        const targetPage = account.type === 'admin' ? 'management.html' : 'menu.html';
+    btn.classList.add('loading');
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData
+        });
+
+        if (!res.ok) {
+            throw new Error('로그인 실패');
+        }
+
+        const data = await res.json();
+        localStorage.setItem('access_token', data.access_token);
+
+        const userRes = await fetch(`${API_BASE}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${data.access_token}` }
+        });
+        const user = await userRes.json();
+
+        const targetPage = user.role === 'admin' ? 'management.html' : 'menu.html';
+
+        btn.classList.remove('loading');
+        btn.classList.add('success-btn');
 
         setTimeout(() => {
-            btn.classList.remove('loading');
-            btn.classList.add('success-btn');
+            document.querySelector('.wave-wrapper').classList.add('success');
+            document.querySelector('.login-wrapper').classList.add('success');
 
             setTimeout(() => {
-                document.querySelector('.wave-wrapper').classList.add('success');
-                document.querySelector('.login-wrapper').classList.add('success');
-
-                setTimeout(() => {
-                    window.location.href = targetPage;
-                }, 1000);
+                window.location.href = targetPage;
             }, 1000);
-        }, 800);
-    } else {
-        const errorBox = document.getElementById('errorBox');
+        }, 1000);
+
+    } catch (e) {
+        btn.classList.remove('loading');
         errorBox.classList.remove('show');
         void errorBox.offsetWidth;
         errorBox.classList.add('show');

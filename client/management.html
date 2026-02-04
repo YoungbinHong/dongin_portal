@@ -10,60 +10,73 @@
 </head>
 
 <body>
-    <div class="bottom-left-btns">
-        <div class="logout-btn" onclick="logout()" title="로그아웃">
-            <svg viewBox="0 0 24 24">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-            </svg>
-        </div>
-    </div>
-
-    <div class="header">
-        <h1>
-            <span style="color: #2d3436;">DONGIN</span>
-            <span style="color: #a29bfe;">PORTAL</span>
-        </h1>
-        <p>사용자 계정 관리</p>
-    </div>
-
-    <div class="management-container">
-        <div class="management-header">
-            <h2>계정 관리</h2>
-            <button class="add-btn" onclick="openAddModal()">
-                <svg viewBox="0 0 24 24" width="18" height="18">
-                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-                계정 추가
-            </button>
-        </div>
-
-        <div class="accounts-wrapper">
-            <div class="account-section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                        </svg>
-                        관리자 계정
-                    </div>
-                    <span class="account-count" id="adminCount">0</span>
-                </div>
-                <div class="account-list" id="adminList"></div>
+    <div class="management-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>
+                    <span style="color: #2d3436;">DONGIN</span>
+                    <span style="color: #a29bfe;">PORTAL</span>
+                </h1>
             </div>
-
-            <div class="account-section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                        </svg>
-                        일반 계정
-                    </div>
-                    <span class="account-count" id="userCount">0</span>
-                </div>
-                <div class="account-list" id="userList"></div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="accounts">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <span>계정 관리</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()" title="로그아웃">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    </svg>
+                    <span>로그아웃</span>
+                </button>
             </div>
-        </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="management-container">
+                <div class="management-header">
+                    <h2>계정 관리</h2>
+                    <button class="add-btn" onclick="openAddModal()">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        계정 추가
+                    </button>
+                </div>
+
+                <div class="accounts-wrapper">
+                    <div class="account-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <svg viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                                </svg>
+                                관리자 계정
+                            </div>
+                            <span class="account-count" id="adminCount">0</span>
+                        </div>
+                        <div class="account-list" id="adminList"></div>
+                    </div>
+
+                    <div class="account-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <svg viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                </svg>
+                                일반 계정
+                            </div>
+                            <span class="account-count" id="userCount">0</span>
+                        </div>
+                        <div class="account-list" id="userList"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <div class="server-status">
@@ -90,16 +103,20 @@
             <div class="form-body">
                 <input type="hidden" id="editingId">
                 <div class="form-group">
-                    <label>이메일</label>
-                    <input type="text" id="accountEmail" placeholder="이메일 입력">
+                    <label>사용자명</label>
+                    <input type="text" id="accountUsername" placeholder="사용자명 입력 (3자 이상)">
                 </div>
                 <div class="form-group">
                     <label>비밀번호</label>
-                    <input type="password" id="accountPassword" placeholder="비밀번호 입력">
+                    <input type="password" id="accountPassword" placeholder="비밀번호 입력 (8자 이상)">
                 </div>
                 <div class="form-group">
                     <label>이름</label>
                     <input type="text" id="accountName" placeholder="이름 입력">
+                </div>
+                <div class="form-group">
+                    <label>직책</label>
+                    <input type="text" id="accountPosition" placeholder="직책 입력">
                 </div>
                 <div class="form-group">
                     <label>계정 유형</label>

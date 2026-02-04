@@ -19,30 +19,35 @@ from auth import (
     get_current_user, get_current_active_admin
 )
 
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin1234!")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-def init_admin(db: Session):
-    admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
-    if not admin:
-        admin = User(
-            username=ADMIN_USERNAME,
-            hashed_password=get_password_hash(ADMIN_PASSWORD),
+def init_test_accounts(db: Session):
+    if not db.query(User).filter(User.username == "admin").first():
+        db.add(User(
+            username="admin",
+            hashed_password=get_password_hash("admin"),
             name="관리자",
             position="시스템관리자",
             role="admin",
             is_active=True
-        )
-        db.add(admin)
-        db.commit()
+        ))
+    if not db.query(User).filter(User.username == "user").first():
+        db.add(User(
+            username="user",
+            hashed_password=get_password_hash("user"),
+            name="테스트유저",
+            position="테스트",
+            role="user",
+            is_active=True
+        ))
+    db.commit()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = next(get_db())
     try:
-        init_admin(db)
+        init_test_accounts(db)
     finally:
         db.close()
     yield
@@ -56,7 +61,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_HOSTS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
