@@ -1,6 +1,7 @@
 dist/
 node_modules/
 assets/
+.venv
 .gitignore
 .git/
 package-lock.json
