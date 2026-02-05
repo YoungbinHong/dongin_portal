@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN PORTAL</title>
+    <link rel="icon" href="assets/images/logo.png" type="image/png">
+    <link rel="stylesheet" href="assets/css/common.css">
+    <link rel="stylesheet" href="assets/css/update.css">
+</head>
+
+<body>
+    <div class="wave-wrapper">
+        <div class="wave"></div>
+        <div class="wave"></div>
+        <div class="wave"></div>
+    </div>
+
+    <div class="update-wrapper">
+        <div class="update-card">
+            <h1 style="font-weight: 900;">
+                <span style="color: #2d3436;">DONGIN</span>
+                <span style="color: #a29bfe;">PORTAL</span>
+            </h1>
+            <p id="statusText" class="status-text">업데이트 확인중...</p>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="progressText" class="progress-text"></p>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">⚠️</div>
+            <h2>서버와 연결할 수 없습니다</h2>
+            <p>네트워크 상태를 확인하고 다시 시도해주세요.</p>
+            <button onclick="window.api.quitApp()">종료</button>
+        </div>
+    </div>
+
+    <script src="assets/js/update.js"></script>
+</body>
+
+</html>

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -83,6 +84,15 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 UPDATES_DIR = os.path.join(os.path.dirname(__file__), "updates")
 os.makedirs(UPDATES_DIR, exist_ok=True)
+
+@app.get("/updates/latest.yml")
+async def serve_latest_yml():
+    path = os.path.join(UPDATES_DIR, "latest.yml")
+    if not os.path.isfile(path):
+        logger.warning("updates/latest.yml not found at %s", path)
+        raise HTTPException(status_code=404, detail="latest.yml not found")
+    return FileResponse(path, media_type="text/yaml")
+
 app.mount("/updates", StaticFiles(directory=UPDATES_DIR), name="updates")
 
 @app.get("/")

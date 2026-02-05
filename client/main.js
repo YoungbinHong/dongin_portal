@@ -16,8 +16,10 @@ const IV = Buffer.alloc(16, 0);
 const APP_NAME = 'DonginSecure';
 const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 
+let mainWindow;
+
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
         minWidth: 1280,
@@ -31,8 +33,14 @@ function createWindow() {
         autoHideMenuBar: true
     });
 
-    win.loadFile('login.html');
+    mainWindow.loadFile('update.html');
 }
+
+ipcMain.handle('go-to-login', () => {
+    if (mainWindow) {
+        mainWindow.loadFile('login.html');
+    }
+});
 
 // ===== IPC 핸들러: 경로 관련 =====
 ipcMain.handle('get-home-path', () => {
@@ -244,38 +252,87 @@ ipcMain.handle('set-auto-start', (event, enabled) => {
 });
 
 // ===== 자동 업데이트 =====
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+const UPDATE_CHECK_TIMEOUT_MS = 15000;
+let updateCheckTimeoutId = null;
 
-autoUpdater.on('update-available', (info) => {
-    dialog.showMessageBox({
-        type: 'info',
-        title: '업데이트 발견',
-        message: `새 버전 ${info.version}을 다운로드합니다.`
-    });
+function clearUpdateCheckTimeout() {
+    if (updateCheckTimeoutId) {
+        clearTimeout(updateCheckTimeoutId);
+        updateCheckTimeoutId = null;
+    }
+}
+
+function startUpdateCheckTimeout() {
+    clearUpdateCheckTimeout();
+    updateCheckTimeoutId = setTimeout(() => {
+        updateCheckTimeoutId = null;
+        if (mainWindow) {
+            mainWindow.webContents.send('update-status', { status: 'not-available' });
+        }
+    }, UPDATE_CHECK_TIMEOUT_MS);
+}
+
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.forceDevUpdateConfig = true;
+
+autoUpdater.on('checking-for-update', () => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', { status: 'checking' });
+    }
 });
 
-autoUpdater.on('update-downloaded', (info) => {
-    dialog.showMessageBox({
-        type: 'info',
-        title: '업데이트 준비 완료',
-        message: '업데이트가 다운로드되었습니다. 앱을 재시작하면 설치됩니다.',
-        buttons: ['지금 재시작', '나중에']
-    }).then((result) => {
-        if (result.response === 0) {
-            autoUpdater.quitAndInstall();
-        }
-    });
+autoUpdater.on('update-available', (info) => {
+    clearUpdateCheckTimeout();
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', { status: 'available', version: info.version });
+    }
+});
+
+autoUpdater.on('update-not-available', () => {
+    clearUpdateCheckTimeout();
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', { status: 'not-available' });
+    }
+});
+
+autoUpdater.on('download-progress', (progress) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', {
+            status: 'downloading',
+            percent: progress.percent,
+            transferred: progress.transferred,
+            total: progress.total
+        });
+    }
+});
+
+autoUpdater.on('update-downloaded', () => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', { status: 'downloaded' });
+    }
+    setTimeout(() => {
+        autoUpdater.quitAndInstall();
+    }, 1500);
 });
 
 autoUpdater.on('error', (err) => {
+    clearUpdateCheckTimeout();
     console.error('업데이트 오류:', err);
+    if (mainWindow) {
+        mainWindow.webContents.send('update-status', { status: 'error', message: err.message });
+    }
 });
 
 // 앱 시작
 app.whenReady().then(() => {
     createWindow();
-    autoUpdater.checkForUpdates();
+    mainWindow.webContents.on('did-finish-load', () => {
+        if (mainWindow.webContents.getURL().includes('update.html')) {
+            startUpdateCheckTimeout();
+            autoUpdater.checkForUpdates();
+        }
+    });
 });
 
 app.on('window-all-closed', () => {

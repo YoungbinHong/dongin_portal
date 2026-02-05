@@ -8,3 +8,4 @@ package-lock.json
 package.json
 preload.js
 *.log
+api_key
