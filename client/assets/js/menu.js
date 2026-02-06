@@ -19,14 +19,20 @@ async function logEvent(action) {
     } catch {}
 }
 
+let _themeInitialized = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
+    _themeInitialized = true;
+    logEvent('메뉴 화면 진입');
 });
 
 const _originalApplyTheme = applyTheme;
 applyTheme = function(theme) {
     _originalApplyTheme(theme);
-    logEvent(`테마 변경: ${theme === 'dark' ? '어두운 테마' : '밝은 테마'}`);
+    if (_themeInitialized) {
+        logEvent(`테마 변경: ${theme === 'dark' ? '어두운 테마' : '밝은 테마'}`);
+    }
 };
 
 function openSettings() {
@@ -91,10 +97,25 @@ const transitionConfigs = {
         icon: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
         title: 'DONGIN AI AGENT',
         gradient: 'linear-gradient(135deg, #00b894 0%, #00a085 100%)'
+    },
+    'card-remote': {
+        icon: '<svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>',
+        title: 'DONGIN REMOTE CONTROL',
+        gradient: 'linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)'
+    },
+    'card-mail': {
+        icon: '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+        title: 'DONGIN MAIL SCREENER',
+        gradient: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)'
+    },
+    'card-community': {
+        icon: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+        title: 'DONGIN COMMUNITY',
+        gradient: 'linear-gradient(135deg, #fd79a8 0%, #e84393 100%)'
     }
 };
 
-document.querySelectorAll('.program-card.card-secure, .program-card.card-pdf, .program-card.card-ai').forEach(card => {
+document.querySelectorAll('.program-card.card-secure, .program-card.card-pdf, .program-card.card-ai, .program-card.card-remote, .program-card.card-mail, .program-card.card-community').forEach(card => {
     card.addEventListener('click', function(e) {
         e.preventDefault();
         const href = this.getAttribute('href');
@@ -104,7 +125,10 @@ document.querySelectorAll('.program-card.card-secure, .program-card.card-pdf, .p
         const transitionTitle = document.getElementById('transitionTitle');
 
         const cardType = this.classList.contains('card-pdf') ? 'card-pdf' :
-                        this.classList.contains('card-ai') ? 'card-ai' : 'card-secure';
+                        this.classList.contains('card-ai') ? 'card-ai' :
+                        this.classList.contains('card-remote') ? 'card-remote' :
+                        this.classList.contains('card-mail') ? 'card-mail' :
+                        this.classList.contains('card-community') ? 'card-community' : 'card-secure';
         const config = transitionConfigs[cardType];
 
         logEvent(`프로그램 선택: ${config.title}`);

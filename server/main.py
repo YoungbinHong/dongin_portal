@@ -11,14 +11,24 @@ import uvicorn
 import os
 import sys
 import logging
+import datetime
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    stream=sys.stdout
-)
+class _SeoulFormatter(logging.Formatter):
+    _tz = datetime.timezone(datetime.timedelta(hours=9))
+    def formatTime(self, record, datefmt=None):
+        ct = datetime.datetime.fromtimestamp(record.created, tz=self._tz)
+        return ct.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
+
+_handler = logging.StreamHandler(sys.stdout)
+_handler.setFormatter(_SeoulFormatter("%(asctime)s | %(message)s"))
+
 logger = logging.getLogger("portal")
+logger.setLevel(logging.INFO)
+logger.addHandler(_handler)
+logger.propagate = False
+
+for _name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
 
 from database import engine, get_db, Base
 from models import User

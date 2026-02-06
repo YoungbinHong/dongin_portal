@@ -23,7 +23,7 @@ services:
       - db
     volumes:
       - .:/app
-    command: uvicorn main:app --host 0.0.0.0 --reload --access-log
+    command: uvicorn main:app --host 0.0.0.0 --reload --no-access-log
 
 volumes:
   postgres_data:

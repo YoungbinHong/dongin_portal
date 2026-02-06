@@ -142,6 +142,45 @@ body {
     color: #00a085;
 }
 
+.card-remote .card-icon {
+    background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+}
+
+.card-remote .card-subtitle {
+    color: #fdcb6e;
+}
+
+.card-remote .card-badge {
+    background: rgba(253, 203, 110, 0.15);
+    color: #e17055;
+}
+
+.card-mail .card-icon {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+}
+
+.card-mail .card-subtitle {
+    color: #74b9ff;
+}
+
+.card-mail .card-badge {
+    background: rgba(116, 185, 255, 0.15);
+    color: #0984e3;
+}
+
+.card-community .card-icon {
+    background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+}
+
+.card-community .card-subtitle {
+    color: #fd79a8;
+}
+
+.card-community .card-badge {
+    background: rgba(253, 121, 168, 0.15);
+    color: #e84393;
+}
+
 .card-coming .card-icon {
     background: linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%);
 }

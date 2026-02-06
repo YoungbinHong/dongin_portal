@@ -8,7 +8,9 @@
       "Bash(docker logs:*)",
       "Bash(dir:*)",
       "Bash(\"c:\\\\Users\\\\dongin311\\\\프로그램\\\\dongin_portal\\\\client\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\" --version)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

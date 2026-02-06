@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN COMMUNITY v0.1.0</title>
+    <link rel="icon" href="../assets/images/logo.png" type="image/png">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/scrollbar.css">
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-main">DONGIN</div>
+            <div class="logo-sub">COMMUNITY</div>
+            <div class="logo-version">v0.1.0</div>
+        </div>
+
+        <button class="new-post-btn" onclick="showView('write')">
+            ✏️ 글쓰기
+        </button>
+
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="filterCategory('all')">
+                <div class="menu-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                </div>
+                전체 글
+            </div>
+            <div class="menu-item" onclick="filterCategory('notice')">
+                <div class="menu-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                공지사항
+            </div>
+            <div class="menu-item" onclick="filterCategory('popular')">
+                <div class="menu-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                </div>
+                인기글
+            </div>
+            <div class="menu-item" onclick="filterCategory('my')">
+                <div class="menu-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                내 글
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="footer-icon" onclick="showHomeConfirm()" title="메뉴로 돌아가기">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
+            <div class="footer-icon" onclick="openSettings()" title="설정">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+            </div>
+            <div class="footer-icon" onclick="logout()" title="로그아웃">
+                <svg viewBox="0 0 24 24">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="header">
+            <h1>자유게시판</h1>
+        </div>
+
+        <div class="content">
+            <div id="listView" class="section active">
+                <div class="toolbar">
+                    <input type="text" class="search-box" placeholder="검색..." id="searchInput" oninput="renderPostList()">
+                    <div class="category-filters">
+                        <button class="filter-btn active" onclick="setCategoryFilter('all')">전체</button>
+                        <button class="filter-btn" onclick="setCategoryFilter('general')">일반</button>
+                        <button class="filter-btn" onclick="setCategoryFilter('question')">질문</button>
+                        <button class="filter-btn" onclick="setCategoryFilter('suggestion')">건의</button>
+                        <button class="filter-btn" onclick="setCategoryFilter('notice')">공지</button>
+                    </div>
+                </div>
+                <div class="post-list" id="postList"></div>
+            </div>
+
+            <div id="detailView" class="section">
+                <div class="post-detail" id="postDetail"></div>
+            </div>
+
+            <div id="writeView" class="section">
+                <div class="write-form">
+                    <div class="form-group">
+                        <label class="form-label">제목</label>
+                        <input type="text" class="form-input" id="postTitle" placeholder="제목을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">카테고리</label>
+                        <select class="form-select" id="postCategory">
+                            <option value="general">일반</option>
+                            <option value="question">질문</option>
+                            <option value="suggestion">건의</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">내용</label>
+                        <textarea class="form-textarea" id="postContent" placeholder="내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="submit-btn" onclick="submitPost()">작성</button>
+                        <button class="cancel-btn" onclick="showView('list')">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay">
+        <div id="logoutContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">로그아웃</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">로그아웃하시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
+                <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmLogout()">확인</button>
+            </div>
+        </div>
+
+        <div id="homeContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">메인 메뉴</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">메인 메뉴로 이동하시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
+                <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmGoToMenu()">확인</button>
+            </div>
+        </div>
+
+        <div id="settingsContent" class="settings-modal" style="display: none;">
+            <div class="settings-sidebar">
+                <div class="settings-menu-item active" onclick="switchTab(event, 'general')">일반</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'account')">사용자 계정</div>
+                <div class="settings-menu-item" onclick="switchTab(event, 'info')">프로그램 정보</div>
+            </div>
+            <div class="settings-content">
+                <button class="close-btn" onclick="closeModal()">×</button>
+                <div id="general" class="settings-tab active">
+                    <div class="settings-title">일반</div>
+                    <div class="setting-group">
+                        <label class="setting-label">테마 설정</label>
+                        <select id="themeSelect" onchange="applyTheme(this.value)">
+                            <option value="light">밝은 테마 (기본)</option>
+                            <option value="dark">어두운 테마</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="account" class="settings-tab">
+                    <div class="settings-title">사용자 계정</div>
+                    <div class="setting-group">
+                        <label class="setting-label">로그인한 계정</label>
+                        <div style="font-size: 14px; color: #636e72; padding: 12px; background: rgba(0, 0, 0, 0.03); border-radius: 8px;" id="loginAccount">user</div>
+                    </div>
+                </div>
+                <div id="info" class="settings-tab">
+                    <div class="settings-title">프로그램 정보</div>
+                    <div class="setting-group">
+                        <label class="setting-label">프로그램 이름</label>
+                        <div style="font-size: 14px; color: #636e72;">DONGIN COMMUNITY v0.1.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logoutOverlay" class="logout-overlay"></div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

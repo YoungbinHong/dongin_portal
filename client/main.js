@@ -273,7 +273,13 @@ ipcMain.handle('check-update', (event, baseUrl, version) => {
                 }
             });
         });
-        req.on('error', reject);
+        req.on('error', (err) => {
+            if (err.code === 'ECONNREFUSED') {
+                resolve({ serverDown: true });
+            } else {
+                reject(err);
+            }
+        });
         req.setTimeout(10000, () => {
             req.destroy();
             reject(new Error('timeout'));
