@@ -121,6 +121,7 @@ document.querySelectorAll('.program-card.card-secure, .program-card.card-pdf, .p
     card.addEventListener('click', function(e) {
         e.preventDefault();
         if (lastDragDistance > 5) return;
+        if (this.dataset.isCenter !== 'true') return;
         const href = this.getAttribute('href');
         const transition = document.getElementById('pageTransition');
         const loaderBar = document.getElementById('loaderBar');
@@ -202,11 +203,15 @@ function updateCarousel() {
             card.style.transform = 'scale(1)';
             card.style.opacity = '1';
             card.style.filter = 'blur(0px)';
+            card.style.pointerEvents = 'auto';
+            card.style.cursor = 'pointer';
         } else {
             card.style.visibility = 'visible';
             card.style.transform = 'scale(0.85)';
             card.style.opacity = '0.5';
             card.style.filter = 'blur(3px)';
+            card.style.pointerEvents = 'none';
+            card.style.cursor = 'default';
         }
     });
 }
