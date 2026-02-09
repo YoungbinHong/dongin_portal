@@ -8,6 +8,7 @@
     display: flex;
     flex-direction: column;
     padding: 20px 0;
+    overflow-x: hidden;
 }
 
 .logo-area {
@@ -99,6 +100,34 @@ body.dark-theme .logo-area {
 .menu-item.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    position: relative;
+}
+
+.menu-item.disabled::after {
+    content: attr(title);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background: #2d3436;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.menu-item.disabled:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 .coming-badge {
