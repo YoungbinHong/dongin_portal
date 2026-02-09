@@ -77,6 +77,75 @@
                 <input type="file" id="fileInput" accept=".pdf" style="display:none" onchange="handleFileSelect(event)">
             </div>
 
+            <div class="compress-workspace" id="compressWorkspace" style="display:none;">
+                <div class="compress-left">
+                    <div class="compress-file-info">
+                        <div class="compress-file-icon">
+                            <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
+                        </div>
+                        <div class="compress-file-detail">
+                            <div class="compress-file-name" id="compressFileName">-</div>
+                            <div class="compress-file-size" id="compressFileSize">-</div>
+                        </div>
+                        <div class="compress-file-remove" onclick="removeCompressFile()">
+                            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        </div>
+                    </div>
+
+                    <div class="compress-slider-area">
+                        <div class="compress-slider-label">압축 수준</div>
+                        <div class="compress-slider-wrap">
+                            <span class="compress-slider-end">최대 압축</span>
+                            <input type="range" id="compressSlider" min="1" max="100" value="70" class="compress-slider">
+                            <span class="compress-slider-end">최소 압축</span>
+                        </div>
+                        <div class="compress-quality-display">
+                            <span class="compress-quality-value" id="compressQualityValue">70%</span>
+                        </div>
+                        <div class="compress-warning-bubble" id="compressWarning">
+                            <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                            <span>화질이 매우 낮습니다</span>
+                        </div>
+                    </div>
+
+                    <div class="compress-info-row">
+                        <div class="compress-info-item">
+                            <span class="compress-info-label">예상 용량</span>
+                            <span class="compress-info-value" id="compressEstSize">-</span>
+                        </div>
+                        <div class="compress-info-item">
+                            <span class="compress-info-label">절감률</span>
+                            <span class="compress-info-value" id="compressSaveRate">-</span>
+                        </div>
+                    </div>
+
+                    <button class="execute-btn compress-execute-btn" onclick="executeTask()">PDF 압축하기</button>
+                </div>
+
+                <div class="compress-right">
+                    <div class="compress-preview-area" id="compressPreviewArea">
+                        <canvas id="compressPreviewCanvas"></canvas>
+                        <div class="compress-preview-loading" id="compressPreviewLoading" style="display:none;">
+                            <div class="preview-spinner"></div>
+                            <span>미리보기 생성 중...</span>
+                        </div>
+                        <div class="zoom-tip" id="zoomTip" style="display:none;">
+                            <span>Ctrl + 마우스 휠 또는 +/- 키로 확대/축소할 수 있습니다</span>
+                            <button class="zoom-tip-btn" onclick="dismissZoomTip()">확인</button>
+                        </div>
+                    </div>
+                    <div class="compress-page-nav">
+                        <button class="compress-nav-btn" onclick="compressPrevPage()">
+                            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                        </button>
+                        <span class="compress-page-info" id="compressPageInfo">1 / 1</span>
+                        <button class="compress-nav-btn" onclick="compressNextPage()">
+                            <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="file-list-container" id="fileListContainer" style="display:none;">
                 <div class="file-list-header">
                     <span id="fileCount">0개의 파일</span>
@@ -86,39 +155,6 @@
             </div>
 
             <div class="options-panel" id="optionsPanel" style="display:none;">
-                <div id="compressOptions" class="tool-options">
-                    <div class="option-title">압축 수준</div>
-                    <div class="compress-slider-container">
-                        <div class="slider-labels">
-                            <span>최대 압축</span>
-                            <span>권장</span>
-                            <span>최소 압축</span>
-                        </div>
-                        <input type="range" id="compressSlider" min="0" max="2" value="1" class="compress-slider">
-                        <div class="slider-desc" id="sliderDesc">품질과 용량의 균형</div>
-                    </div>
-
-                    <div class="preview-section" id="compressPreview" style="display:none;">
-                        <div class="option-title">미리보기</div>
-                        <div class="preview-compare">
-                            <div class="preview-box">
-                                <div class="preview-label">원본</div>
-                                <canvas id="previewOriginal"></canvas>
-                                <div class="preview-size" id="originalSize">-</div>
-                            </div>
-                            <div class="preview-box">
-                                <div class="preview-label">압축 후</div>
-                                <canvas id="previewCompressed"></canvas>
-                                <div class="preview-size" id="compressedSize">-</div>
-                            </div>
-                        </div>
-                        <div class="preview-loading" id="previewLoading" style="display:none;">
-                            <div class="preview-spinner"></div>
-                            <span>압축 미리보기 생성 중...</span>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="splitOptions" class="tool-options" style="display:none;">
                     <div class="option-title">분할 방식</div>
                     <div class="option-group">
@@ -289,7 +325,14 @@
     </div>
 
     <script src="../assets/js/connection.js"></script>
-    <script src="../../node_modules/pdfjs-dist/build/pdf.mjs" type="module"></script>
+    <script>
+        if (!Uint8Array.prototype.toHex) {
+            Uint8Array.prototype.toHex = function () {
+                return Array.from(this, b => b.toString(16).padStart(2, '0')).join('');
+            };
+        }
+    </script>
+    <script src="../node_modules/pdfjs-dist/build/pdf.worker.mjs" type="module"></script>
     <script src="js/app.js" type="module"></script>
 </body>
 

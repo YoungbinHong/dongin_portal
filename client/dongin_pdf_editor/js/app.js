@@ -1,12 +1,20 @@
 import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.mjs';
 import { PDFDocument } from '../../node_modules/pdf-lib/dist/pdf-lib.esm.js';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '../../node_modules/pdfjs-dist/build/pdf.worker.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../../node_modules/pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
 
 let currentTool = 'compress';
 let selectedFiles = [];
 let previewDebounceTimer = null;
-let lastCompressedData = null;
+
+let compressPdfDoc = null;
+let compressCurrentPage = 1;
+let compressTotalPages = 0;
+let compressArrayBuffer = null;
+let compressBaseScale = 1;
+let compressZoomLevel = 1;
+let isRenderingCompress = false;
+let progressInterval = null;
 
 const toolConfig = {
     compress: {
@@ -38,6 +46,7 @@ const toolConfig = {
 window.selectTool = selectTool;
 window.handleFileSelect = handleFileSelect;
 window.removeFile = removeFile;
+window.removeCompressFile = removeCompressFile;
 window.executeTask = executeTask;
 window.showHomeConfirm = showHomeConfirm;
 window.openSettings = openSettings;
@@ -49,6 +58,9 @@ window.downloadResult = downloadResult;
 window.switchTab = switchTab;
 window.applyTheme = applyTheme;
 window.toggleAutoStart = toggleAutoStart;
+window.compressPrevPage = compressPrevPage;
+window.compressNextPage = compressNextPage;
+window.dismissZoomTip = dismissZoomTip;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const savedTheme = localStorage.getItem('donginTheme');
@@ -66,11 +78,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSplitModeToggle();
     setupFileDragSort();
     setupCompressSlider();
+
+    const previewArea = document.getElementById('compressPreviewArea');
+    previewArea.addEventListener('wheel', (e) => {
+        if (!e.ctrlKey || !compressPdfDoc) return;
+        e.preventDefault();
+        applyCompressZoom(e.deltaY < 0 ? 0.2 : -0.2);
+    }, { passive: false });
+
+    document.addEventListener('keydown', (e) => {
+        if (!compressPdfDoc) return;
+        if (document.querySelector('.modal-overlay[style*="flex"]')) return;
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); applyCompressZoom(0.2); }
+        if (e.key === '-' || e.key === '_') { e.preventDefault(); applyCompressZoom(-0.2); }
+    });
 });
 
 function selectTool(tool) {
     currentTool = tool;
     selectedFiles = [];
+    resetCompressState();
 
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.remove('active');
@@ -80,7 +107,6 @@ function selectTool(tool) {
     const config = toolConfig[tool];
     document.getElementById('toolTitle').textContent = config.title;
     document.getElementById('toolDesc').textContent = config.desc;
-    document.getElementById('executeBtnText').textContent = config.btnText;
 
     if (config.multiFile) {
         document.getElementById('fileInput').setAttribute('multiple', '');
@@ -92,6 +118,7 @@ function selectTool(tool) {
     document.getElementById('fileListContainer').style.display = 'none';
     document.getElementById('optionsPanel').style.display = 'none';
     document.getElementById('executeBtn').style.display = 'none';
+    document.getElementById('compressWorkspace').style.display = 'none';
 
     document.querySelectorAll('.tool-options').forEach(opt => {
         opt.style.display = 'none';
@@ -102,11 +129,57 @@ function selectTool(tool) {
         optionsEl.style.display = 'block';
     }
 
-    if (tool === 'compress') {
-        document.getElementById('compressPreview').style.display = 'none';
+    if (tool !== 'compress') {
+        updateFileList();
     }
+}
 
-    updateFileList();
+function resetCompressState() {
+    compressPdfDoc = null;
+    compressCurrentPage = 1;
+    compressTotalPages = 0;
+    compressArrayBuffer = null;
+    compressBaseScale = 1;
+    compressZoomLevel = 1;
+    isRenderingCompress = false;
+    document.getElementById('compressWarning').classList.remove('show');
+    const canvas = document.getElementById('compressPreviewCanvas');
+    if (canvas) {
+        canvas.style.transform = '';
+        canvas.style.width = '';
+        canvas.style.height = '';
+        canvas.style.margin = '';
+    }
+}
+
+function applyCompressZoom(delta) {
+    compressZoomLevel = Math.min(5, Math.max(1, compressZoomLevel + delta));
+    const canvas = document.getElementById('compressPreviewCanvas');
+    canvas.style.transform = `scale(${compressZoomLevel})`;
+
+    if (compressZoomLevel === 1) {
+        canvas.style.margin = '';
+    } else {
+        const currentWidth = parseFloat(canvas.style.width);
+        const currentHeight = parseFloat(canvas.style.height);
+        const extraWidth = (currentWidth * (compressZoomLevel - 1)) / 2;
+        const extraHeight = (currentHeight * (compressZoomLevel - 1)) / 2;
+        canvas.style.margin = `${extraHeight}px ${extraWidth}px`;
+
+        const container = canvas.parentElement;
+        setTimeout(() => {
+            container.scrollTo({
+                top: (container.scrollHeight - container.clientHeight) / 2,
+                left: (container.scrollWidth - container.clientWidth) / 2,
+                behavior: 'smooth'
+            });
+        }, 50);
+    }
+}
+
+function dismissZoomTip() {
+    document.getElementById('zoomTip').style.display = 'none';
+    localStorage.setItem('donginZoomTipDismissed', '1');
 }
 
 function setupDropZone() {
@@ -139,12 +212,6 @@ function setupDropZone() {
         const files = [...dt.files].filter(f => f.type === 'application/pdf');
         handleFiles(files);
     }, false);
-
-    dropZone.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'BUTTON') {
-            document.getElementById('fileInput').click();
-        }
-    });
 }
 
 function handleFileSelect(event) {
@@ -167,11 +234,206 @@ function handleFiles(files) {
         selectedFiles = [files[0]];
     }
 
-    updateFileList();
-
     if (currentTool === 'compress' && selectedFiles.length > 0) {
-        updateCompressPreview();
+        showCompressWorkspace();
+    } else {
+        updateFileList();
     }
+}
+
+function showCompressWorkspace() {
+    const file = selectedFiles[0];
+    document.getElementById('dropZone').style.display = 'none';
+    document.getElementById('fileListContainer').style.display = 'none';
+    document.getElementById('optionsPanel').style.display = 'none';
+    document.getElementById('executeBtn').style.display = 'none';
+    document.getElementById('compressWorkspace').style.display = 'flex';
+
+    document.getElementById('compressFileName').textContent = file.name;
+    document.getElementById('compressFileSize').textContent = formatFileSize(file.size);
+
+    const slider = document.getElementById('compressSlider');
+    slider.value = 80;
+    document.getElementById('compressQualityValue').textContent = '80%';
+    document.getElementById('compressWarning').classList.remove('show');
+    document.getElementById('compressEstSize').textContent = '-';
+    document.getElementById('compressSaveRate').textContent = '-';
+
+    compressBaseScale = 1;
+    compressZoomLevel = 1;
+    const canvas = document.getElementById('compressPreviewCanvas');
+    canvas.style.transform = '';
+    canvas.style.width = '';
+    canvas.style.height = '';
+    canvas.style.margin = '';
+
+    if (!localStorage.getItem('donginZoomTipDismissed')) {
+        document.getElementById('zoomTip').style.display = 'flex';
+    }
+
+    loadCompressPdf(file);
+}
+
+function removeCompressFile() {
+    selectedFiles = [];
+    resetCompressState();
+    document.getElementById('compressWorkspace').style.display = 'none';
+    document.getElementById('dropZone').style.display = 'flex';
+}
+
+async function loadCompressPdf(file) {
+    const loading = document.getElementById('compressPreviewLoading');
+    loading.style.display = 'flex';
+
+    try {
+        compressArrayBuffer = await file.arrayBuffer();
+        compressPdfDoc = await pdfjsLib.getDocument({ data: compressArrayBuffer.slice(0) }).promise;
+        compressTotalPages = compressPdfDoc.numPages;
+        compressCurrentPage = 1;
+        document.getElementById('compressPageInfo').textContent = `1 / ${compressTotalPages}`;
+        await new Promise(r => requestAnimationFrame(r));
+        await renderCompressPreview();
+    } catch (e) {
+        console.error('PDF load error:', e);
+        loading.style.display = 'none';
+        showAlert('PDF 로드 오류', e.message || String(e));
+    }
+}
+
+async function renderCompressPreview() {
+    if (!compressPdfDoc || isRenderingCompress) return;
+
+    isRenderingCompress = true;
+    const loading = document.getElementById('compressPreviewLoading');
+    loading.style.display = 'flex';
+
+    try {
+        const page = await compressPdfDoc.getPage(compressCurrentPage);
+        const canvas = document.getElementById('compressPreviewCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const slider = document.getElementById('compressSlider');
+        const quality = 0.65 + (parseInt(slider.value) / 100) * 0.27;
+        const actualScale = 0.7 + (quality - 0.65) * 4.8;
+
+        const viewport = page.getViewport({ scale: actualScale });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const jpegBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+        if (!jpegBlob) {
+            loading.style.display = 'none';
+            return;
+        }
+
+        await new Promise((resolve) => {
+            const jpegUrl = URL.createObjectURL(jpegBlob);
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(jpegUrl);
+                resolve();
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(jpegUrl);
+                resolve();
+            };
+            img.src = jpegUrl;
+        });
+
+        const containerWidth = Math.max(canvas.parentElement.clientWidth - 20, 200);
+        const containerHeight = Math.max(canvas.parentElement.clientHeight - 20, 200);
+        const scaleW = containerWidth / canvas.width;
+        const scaleH = containerHeight / canvas.height;
+        const displayScale = Math.min(scaleW, scaleH, 2.0);
+
+        const baseWidth = canvas.width * displayScale;
+        const baseHeight = canvas.height * displayScale;
+        canvas.style.width = baseWidth + 'px';
+        canvas.style.height = baseHeight + 'px';
+        canvas.style.transformOrigin = 'center';
+        canvas.style.transform = `scale(${compressZoomLevel})`;
+
+        if (compressZoomLevel === 1) {
+            canvas.style.margin = '';
+        } else {
+            const extraWidth = (baseWidth * (compressZoomLevel - 1)) / 2;
+            const extraHeight = (baseHeight * (compressZoomLevel - 1)) / 2;
+            canvas.style.margin = `${extraHeight}px ${extraWidth}px`;
+
+            const container = canvas.parentElement;
+            setTimeout(() => {
+                container.scrollTo({
+                    top: (container.scrollHeight - container.clientHeight) / 2,
+                    left: (container.scrollWidth - container.clientWidth) / 2,
+                    behavior: 'smooth'
+                });
+            }, 50);
+        }
+
+        const file = selectedFiles[0];
+        const estimatedSinglePage = jpegBlob.size;
+        const estimatedTotal = estimatedSinglePage * compressTotalPages;
+        document.getElementById('compressEstSize').textContent = formatFileSize(estimatedTotal);
+
+        if (file.size > 0) {
+            const diff = estimatedTotal - file.size;
+            if (diff > 0) {
+                const increaseRate = ((diff / file.size) * 100).toFixed(1);
+                document.getElementById('compressSaveRate').textContent = increaseRate + '% 증가';
+            } else {
+                const saveRate = ((1 - estimatedTotal / file.size) * 100).toFixed(1);
+                document.getElementById('compressSaveRate').textContent = saveRate + '% 절감';
+            }
+        }
+    } catch (e) {
+        console.error('Preview render error:', e);
+        showAlert('미리보기 오류', e.message || String(e));
+    } finally {
+        loading.style.display = 'none';
+        isRenderingCompress = false;
+    }
+}
+
+function compressPrevPage() {
+    if (compressCurrentPage <= 1) return;
+    compressCurrentPage--;
+    document.getElementById('compressPageInfo').textContent = `${compressCurrentPage} / ${compressTotalPages}`;
+    renderCompressPreview();
+}
+
+function compressNextPage() {
+    if (compressCurrentPage >= compressTotalPages) return;
+    compressCurrentPage++;
+    document.getElementById('compressPageInfo').textContent = `${compressCurrentPage} / ${compressTotalPages}`;
+    renderCompressPreview();
+}
+
+function setupCompressSlider() {
+    const slider = document.getElementById('compressSlider');
+    const qualityValue = document.getElementById('compressQualityValue');
+    const warning = document.getElementById('compressWarning');
+
+    slider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        qualityValue.textContent = val + '%';
+
+        if (val <= 30) {
+            warning.classList.add('show');
+        } else {
+            warning.classList.remove('show');
+        }
+
+        if (previewDebounceTimer) clearTimeout(previewDebounceTimer);
+        previewDebounceTimer = setTimeout(() => {
+            if (selectedFiles.length > 0 && currentTool === 'compress' && compressPdfDoc) {
+                renderCompressPreview();
+            }
+        }, 300);
+    });
 }
 
 function updateFileList() {
@@ -195,6 +457,7 @@ function updateFileList() {
     executeBtn.style.display = 'block';
 
     document.getElementById('fileCount').textContent = `${selectedFiles.length}개의 파일`;
+    document.getElementById('executeBtnText').textContent = toolConfig[currentTool].btnText;
 
     fileList.innerHTML = selectedFiles.map((file, index) => `
         <div class="file-item" draggable="${currentTool === 'merge'}" data-index="${index}">
@@ -290,79 +553,11 @@ function updateFileOrder() {
     updateFileList();
 }
 
-function setupCompressSlider() {
-    const slider = document.getElementById('compressSlider');
-    const desc = document.getElementById('sliderDesc');
-    const levels = [
-        { value: 'maximum', desc: '최소 용량, 품질 저하 있음' },
-        { value: 'recommended', desc: '품질과 용량의 균형' },
-        { value: 'minimum', desc: '고품질 유지, 용량 절감 적음' }
-    ];
-
-    slider.addEventListener('input', (e) => {
-        desc.textContent = levels[e.target.value].desc;
-
-        if (previewDebounceTimer) clearTimeout(previewDebounceTimer);
-        previewDebounceTimer = setTimeout(() => {
-            if (selectedFiles.length > 0 && currentTool === 'compress') {
-                updateCompressPreview();
-            }
-        }, 300);
-    });
-}
-
-async function updateCompressPreview() {
-    if (selectedFiles.length === 0 || currentTool !== 'compress') return;
-
-    const file = selectedFiles[0];
-    const previewSection = document.getElementById('compressPreview');
-    const previewLoading = document.getElementById('previewLoading');
-
-    previewSection.style.display = 'block';
-    previewLoading.style.display = 'flex';
-
-    try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const page = await pdf.getPage(1);
-
-        const canvasOriginal = document.getElementById('previewOriginal');
-        const ctxOriginal = canvasOriginal.getContext('2d');
-        const viewport = page.getViewport({ scale: 0.5 });
-        canvasOriginal.width = viewport.width;
-        canvasOriginal.height = viewport.height;
-        await page.render({ canvasContext: ctxOriginal, viewport }).promise;
-
-        document.getElementById('originalSize').textContent = formatFileSize(file.size);
-
-        const slider = document.getElementById('compressSlider');
-        const qualities = [0.3, 0.6, 0.85];
-        const jpegQuality = qualities[slider.value];
-
-        const compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
-        lastCompressedData = compressedBytes;
-
-        const compressedPdf = await pdfjsLib.getDocument({ data: compressedBytes }).promise;
-        const compressedPage = await compressedPdf.getPage(1);
-
-        const canvasCompressed = document.getElementById('previewCompressed');
-        const ctxCompressed = canvasCompressed.getContext('2d');
-        canvasCompressed.width = viewport.width;
-        canvasCompressed.height = viewport.height;
-        await compressedPage.render({ canvasContext: ctxCompressed, viewport: compressedPage.getViewport({ scale: 0.5 }) }).promise;
-
-        document.getElementById('compressedSize').textContent = formatFileSize(compressedBytes.length);
-    } catch (e) {
-        console.error('Preview error:', e);
-    } finally {
-        previewLoading.style.display = 'none';
-    }
-}
-
 async function compressPdfToImages(pdfArrayBuffer, jpegQuality) {
     const pdf = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
     const newPdf = await PDFDocument.create();
-    const scale = jpegQuality < 0.5 ? 1.0 : 1.5;
+    const scale = 0.7 + (jpegQuality - 0.65) * 4.8;
+    console.log('Compress - jpegQuality:', jpegQuality, 'scale:', scale);
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -410,6 +605,8 @@ async function executeTask() {
 
 async function executeCompress() {
     const file = selectedFiles[0];
+    const slider = document.getElementById('compressSlider');
+    const jpegQuality = 0.65 + (parseInt(slider.value) / 100) * 0.27;
 
     const { filePath, canceled } = await window.api.showSaveDialog({
         defaultPath: file.name.replace('.pdf', '_compressed.pdf'),
@@ -421,28 +618,26 @@ async function executeCompress() {
     showProgress();
 
     try {
-        let compressedBytes = lastCompressedData;
-        if (!compressedBytes) {
-            const slider = document.getElementById('compressSlider');
-            const qualities = [0.3, 0.6, 0.85];
-            const jpegQuality = qualities[slider.value];
-            const arrayBuffer = await file.arrayBuffer();
-            compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
-        }
+        const arrayBuffer = compressArrayBuffer ? compressArrayBuffer.slice(0) : await file.arrayBuffer();
+        const compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
 
-        const base64 = btoa(String.fromCharCode(...compressedBytes));
+        let binaryString = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < compressedBytes.length; i += chunkSize) {
+            const chunk = compressedBytes.slice(i, i + chunkSize);
+            binaryString += String.fromCharCode(...chunk);
+        }
+        const base64 = btoa(binaryString);
         const result = await window.api.saveCompressedPdf(filePath, base64);
-        closeModal();
+        await completeProgress();
 
         if (result.success) {
-            const savedBytes = file.size - result.size;
-            const savedPercent = ((savedBytes / file.size) * 100).toFixed(1);
-            showAlert('완료', `압축 완료!\n원본: ${formatFileSize(file.size)}\n압축 후: ${formatFileSize(result.size)}\n절감: ${formatFileSize(savedBytes)} (${savedPercent}%)`);
+            showAlert('완료', '압축 완료');
         } else {
             showAlert('오류', result.error);
         }
     } catch (e) {
-        closeModal();
+        await completeProgress();
         showAlert('오류', e.message);
     }
 }
@@ -573,11 +768,13 @@ function showProgress() {
     document.getElementById('progressContent').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
 
+    if (progressInterval) clearInterval(progressInterval);
     let progress = 0;
-    const interval = setInterval(() => {
+    progressInterval = setInterval(() => {
         progress += 5;
-        if (progress >= 90) {
-            clearInterval(interval);
+        if (progress >= 95) {
+            clearInterval(progressInterval);
+            progressInterval = null;
         }
         document.getElementById('progressBar').style.width = progress + '%';
         document.getElementById('progressPercent').textContent = Math.floor(progress);
@@ -610,7 +807,23 @@ function showAlert(title, message) {
     document.getElementById('modalOverlay').style.display = 'flex';
 }
 
+async function completeProgress() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('progressPercent').textContent = '100';
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+    document.getElementById('progressContent').style.display = 'none';
+}
+
 function closeModal() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
     document.getElementById('modalOverlay').style.display = 'none';
     document.querySelectorAll('.alert-modal, .settings-modal').forEach(el => el.style.display = 'none');
 }
