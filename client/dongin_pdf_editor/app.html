@@ -35,10 +35,10 @@
                 <svg viewBox="0 0 24 24"><path d="M17 20.41L18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z"/></svg>
                 <span>PDF 병합</span>
             </div>
-            <div class="menu-item disabled" data-tool="unlock" title="추후 지원 예정">
+            <div class="menu-item" data-tool="unlock" onclick="selectTool('unlock')">
                 <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>
                 <span>비밀번호 해제</span>
-                <span class="coming-badge">준비중</span>
+                <span class="limit-badge">6자리</span>
             </div>
         </div>
 
@@ -72,7 +72,7 @@
                 <div class="drop-icon">
                     <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
                 </div>
-                <div class="drop-text">PDF 파일을 여기에 드래그하거나</div>
+                <div class="drop-text">PDF 파일을 여기에 드래그 앤 드롭으로 추가하거나 파일을 선택해주세요</div>
                 <button class="select-btn" onclick="document.getElementById('fileInput').click()">파일 선택</button>
                 <input type="file" id="fileInput" accept=".pdf" style="display:none" onchange="handleFileSelect(event)">
             </div>
@@ -88,25 +88,34 @@
             <div class="options-panel" id="optionsPanel" style="display:none;">
                 <div id="compressOptions" class="tool-options">
                     <div class="option-title">압축 수준</div>
-                    <div class="option-group">
-                        <label class="option-card active" data-level="recommended">
-                            <input type="radio" name="compressLevel" value="recommended" checked>
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
-                            <div class="option-name">권장</div>
-                            <div class="option-desc">품질과 용량의 균형</div>
-                        </label>
-                        <label class="option-card" data-level="maximum">
-                            <input type="radio" name="compressLevel" value="maximum">
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg></div>
-                            <div class="option-name">최대 압축</div>
-                            <div class="option-desc">최소 용량, 품질 저하 있음</div>
-                        </label>
-                        <label class="option-card" data-level="minimum">
-                            <input type="radio" name="compressLevel" value="minimum">
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>
-                            <div class="option-name">최소 압축</div>
-                            <div class="option-desc">고품질 유지, 용량 절감 적음</div>
-                        </label>
+                    <div class="compress-slider-container">
+                        <div class="slider-labels">
+                            <span>최대 압축</span>
+                            <span>권장</span>
+                            <span>최소 압축</span>
+                        </div>
+                        <input type="range" id="compressSlider" min="0" max="2" value="1" class="compress-slider">
+                        <div class="slider-desc" id="sliderDesc">품질과 용량의 균형</div>
+                    </div>
+
+                    <div class="preview-section" id="compressPreview" style="display:none;">
+                        <div class="option-title">미리보기</div>
+                        <div class="preview-compare">
+                            <div class="preview-box">
+                                <div class="preview-label">원본</div>
+                                <canvas id="previewOriginal"></canvas>
+                                <div class="preview-size" id="originalSize">-</div>
+                            </div>
+                            <div class="preview-box">
+                                <div class="preview-label">압축 후</div>
+                                <canvas id="previewCompressed"></canvas>
+                                <div class="preview-size" id="compressedSize">-</div>
+                            </div>
+                        </div>
+                        <div class="preview-loading" id="previewLoading" style="display:none;">
+                            <div class="preview-spinner"></div>
+                            <span>압축 미리보기 생성 중...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -135,6 +144,40 @@
                 <div id="mergeOptions" class="tool-options" style="display:none;">
                     <div class="option-title">병합 순서</div>
                     <p class="option-hint">파일을 드래그하여 순서를 변경할 수 있습니다</p>
+                </div>
+
+                <div id="unlockOptions" class="tool-options" style="display:none;">
+                    <div class="option-title">비밀번호 해제</div>
+                    <div class="unlock-notice">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        <span>6자리까지의 비밀번호만 해제할 수 있습니다</span>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-card active" data-charset="numeric">
+                            <input type="radio" name="charset" value="numeric" checked>
+                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 8c0 1.11-.9 2-2 2h-2v2h4v2H9v-4c0-1.11.9-2 2-2h2V9H9V7h4c1.1 0 2 .89 2 2v2z"/></svg></div>
+                            <div class="option-name">숫자만</div>
+                            <div class="option-desc">0-9 (빠름)</div>
+                        </label>
+                        <label class="option-card" data-charset="alpha">
+                            <input type="radio" name="charset" value="alpha">
+                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg></div>
+                            <div class="option-name">영문만</div>
+                            <div class="option-desc">a-z, A-Z</div>
+                        </label>
+                        <label class="option-card" data-charset="alphanumeric">
+                            <input type="radio" name="charset" value="alphanumeric">
+                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/></svg></div>
+                            <div class="option-name">영문+숫자</div>
+                            <div class="option-desc">오래 걸림</div>
+                        </label>
+                    </div>
+                    <div class="bruteforce-progress" id="bruteforceProgress" style="display:none;">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="bruteforceBar"></div>
+                        </div>
+                        <div class="progress-text" id="bruteforceText">시도 중: 0 / 0</div>
+                    </div>
                 </div>
             </div>
 
@@ -238,7 +281,8 @@
         <div class="server-tooltip">서버와 연결되었습니다.</div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="../../node_modules/pdfjs-dist/build/pdf.mjs" type="module"></script>
+    <script src="js/app.js" type="module"></script>
 </body>
 
 </html>

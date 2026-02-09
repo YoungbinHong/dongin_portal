@@ -7,6 +7,7 @@ const fsPromises = require('fs').promises;
 const os = require('os');
 const crypto = require('crypto');
 const { exec } = require('child_process');
+const { PDFDocument } = require('pdf-lib');
 
 // 암호화 설정
 const ALGORITHM = 'aes-256-cbc';
@@ -312,6 +313,157 @@ ipcMain.handle('download-and-install', async (event, fullUrl) => {
             reject(err);
         });
     });
+});
+
+// ===== IPC 핸들러: PDF 편집 =====
+ipcMain.handle('get-temp-dir', () => os.tmpdir());
+
+ipcMain.handle('show-save-dialog', async (event, options) => {
+    return await dialog.showSaveDialog(mainWindow, options);
+});
+
+ipcMain.handle('show-open-dialog', async (event, options) => {
+    return await dialog.showOpenDialog(mainWindow, options);
+});
+
+ipcMain.handle('get-pdf-page-count', async (event, pdfPath) => {
+    try {
+        const pdfBytes = await fsPromises.readFile(pdfPath);
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        return { success: true, pageCount: pdfDoc.getPageCount() };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('get-pdf-preview', async (event, pdfPath) => {
+    try {
+        const data = await fsPromises.readFile(pdfPath);
+        return { success: true, data: data.toString('base64') };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('save-compressed-pdf', async (event, outputPath, base64Data) => {
+    try {
+        const data = Buffer.from(base64Data, 'base64');
+        await fsPromises.writeFile(outputPath, data);
+        const stat = await fsPromises.stat(outputPath);
+        return { success: true, outputPath, size: stat.size };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('split-pdf', async (event, inputPath, outputDir, ranges) => {
+    try {
+        const pdfBytes = await fsPromises.readFile(inputPath);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const results = [];
+
+        for (const range of ranges) {
+            const newPdf = await PDFDocument.create();
+            const pages = await newPdf.copyPages(pdfDoc, range.pages.map(p => p - 1));
+            pages.forEach(page => newPdf.addPage(page));
+
+            const newBytes = await newPdf.save();
+            const outPath = path.join(outputDir, `split_${range.name}.pdf`);
+            await fsPromises.writeFile(outPath, newBytes);
+            results.push(outPath);
+        }
+        return { success: true, files: results };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('split-pdf-each', async (event, inputPath, outputDir) => {
+    try {
+        const pdfBytes = await fsPromises.readFile(inputPath);
+        const pdfDoc = await PDFDocument.load(pdfBytes);
+        const totalPages = pdfDoc.getPageCount();
+        const results = [];
+
+        for (let i = 0; i < totalPages; i++) {
+            const newPdf = await PDFDocument.create();
+            const [page] = await newPdf.copyPages(pdfDoc, [i]);
+            newPdf.addPage(page);
+
+            const outPath = path.join(outputDir, `page_${i + 1}.pdf`);
+            await fsPromises.writeFile(outPath, await newPdf.save());
+            results.push(outPath);
+        }
+        return { success: true, files: results, totalPages };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('merge-pdfs', async (event, inputPaths, outputPath) => {
+    try {
+        const mergedPdf = await PDFDocument.create();
+
+        for (const pdfPath of inputPaths) {
+            const pdfBytes = await fsPromises.readFile(pdfPath);
+            const pdf = await PDFDocument.load(pdfBytes);
+            const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            pages.forEach(page => mergedPdf.addPage(page));
+        }
+
+        await fsPromises.writeFile(outputPath, await mergedPdf.save());
+        return { success: true, outputPath };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('unlock-pdf-bruteforce', async (event, inputPath, outputPath, options) => {
+    try {
+        const pdfBytes = await fsPromises.readFile(inputPath);
+        const charsets = {
+            numeric: '0123456789',
+            alpha: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            alphanumeric: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        };
+        const chars = charsets[options.charset] || charsets.alphanumeric;
+        const maxLen = Math.min(options.maxLength || 6, 6);
+
+        let totalCombinations = 0;
+        for (let len = 1; len <= maxLen; len++) {
+            totalCombinations += Math.pow(chars.length, len);
+        }
+
+        let tried = 0;
+
+        function* generatePasswords() {
+            for (let len = 1; len <= maxLen; len++) {
+                yield* generateOfLength(len, '');
+            }
+        }
+
+        function* generateOfLength(len, prefix) {
+            if (prefix.length === len) { yield prefix; return; }
+            for (const c of chars) yield* generateOfLength(len, prefix + c);
+        }
+
+        for (const password of generatePasswords()) {
+            tried++;
+            if (tried % 500 === 0) {
+                mainWindow.webContents.send('bruteforce-progress', { tried, total: totalCombinations });
+            }
+            try {
+                const pdf = await PDFDocument.load(pdfBytes, { password });
+                await fsPromises.writeFile(outputPath, await pdf.save());
+                return { success: true, password, outputPath };
+            } catch (e) {
+                // 비밀번호 틀림
+            }
+        }
+        return { success: false, error: '비밀번호를 찾지 못했습니다.' };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
 
 // 앱 시작

@@ -9,7 +9,9 @@
     "build:all": "electron-builder --win nsis"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.624"
   },
   "devDependencies": {
     "electron": "^33.0.2",
@@ -21,7 +23,9 @@
     "win": {
       "target": {
         "target": "nsis",
-        "arch": ["x64"]
+        "arch": [
+          "x64"
+        ]
       },
       "icon": "icon.ico"
     },

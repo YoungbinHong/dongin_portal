@@ -1,5 +1,12 @@
+import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.mjs';
+import { PDFDocument } from '../../node_modules/pdf-lib/dist/pdf-lib.esm.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = '../../node_modules/pdfjs-dist/build/pdf.worker.mjs';
+
 let currentTool = 'compress';
 let selectedFiles = [];
+let previewDebounceTimer = null;
+let lastCompressedData = null;
 
 const toolConfig = {
     compress: {
@@ -19,10 +26,31 @@ const toolConfig = {
         desc: '여러 PDF 파일을 하나로 합칩니다',
         btnText: 'PDF 병합하기',
         multiFile: true
+    },
+    unlock: {
+        title: '비밀번호 해제',
+        desc: '암호화된 PDF의 비밀번호를 해제합니다 (6자리까지)',
+        btnText: '비밀번호 해제',
+        multiFile: false
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+window.selectTool = selectTool;
+window.handleFileSelect = handleFileSelect;
+window.removeFile = removeFile;
+window.executeTask = executeTask;
+window.showHomeConfirm = showHomeConfirm;
+window.openSettings = openSettings;
+window.logout = logout;
+window.confirmLogout = confirmLogout;
+window.confirmGoToMenu = confirmGoToMenu;
+window.closeModal = closeModal;
+window.downloadResult = downloadResult;
+window.switchTab = switchTab;
+window.applyTheme = applyTheme;
+window.toggleAutoStart = toggleAutoStart;
+
+document.addEventListener('DOMContentLoaded', async () => {
     const savedTheme = localStorage.getItem('donginTheme');
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-theme');
@@ -37,11 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupOptionCards();
     setupSplitModeToggle();
     setupFileDragSort();
+    setupCompressSlider();
 });
 
 function selectTool(tool) {
-    if (tool === 'unlock') return;
-
     currentTool = tool;
     selectedFiles = [];
 
@@ -73,6 +100,10 @@ function selectTool(tool) {
     const optionsEl = document.getElementById(`${tool}Options`);
     if (optionsEl) {
         optionsEl.style.display = 'block';
+    }
+
+    if (tool === 'compress') {
+        document.getElementById('compressPreview').style.display = 'none';
     }
 
     updateFileList();
@@ -137,6 +168,10 @@ function handleFiles(files) {
     }
 
     updateFileList();
+
+    if (currentTool === 'compress' && selectedFiles.length > 0) {
+        updateCompressPreview();
+    }
 }
 
 function updateFileList() {
@@ -255,28 +290,277 @@ function updateFileOrder() {
     updateFileList();
 }
 
-function executeTask() {
+function setupCompressSlider() {
+    const slider = document.getElementById('compressSlider');
+    const desc = document.getElementById('sliderDesc');
+    const levels = [
+        { value: 'maximum', desc: '최소 용량, 품질 저하 있음' },
+        { value: 'recommended', desc: '품질과 용량의 균형' },
+        { value: 'minimum', desc: '고품질 유지, 용량 절감 적음' }
+    ];
+
+    slider.addEventListener('input', (e) => {
+        desc.textContent = levels[e.target.value].desc;
+
+        if (previewDebounceTimer) clearTimeout(previewDebounceTimer);
+        previewDebounceTimer = setTimeout(() => {
+            if (selectedFiles.length > 0 && currentTool === 'compress') {
+                updateCompressPreview();
+            }
+        }, 300);
+    });
+}
+
+async function updateCompressPreview() {
+    if (selectedFiles.length === 0 || currentTool !== 'compress') return;
+
+    const file = selectedFiles[0];
+    const previewSection = document.getElementById('compressPreview');
+    const previewLoading = document.getElementById('previewLoading');
+
+    previewSection.style.display = 'block';
+    previewLoading.style.display = 'flex';
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1);
+
+        const canvasOriginal = document.getElementById('previewOriginal');
+        const ctxOriginal = canvasOriginal.getContext('2d');
+        const viewport = page.getViewport({ scale: 0.5 });
+        canvasOriginal.width = viewport.width;
+        canvasOriginal.height = viewport.height;
+        await page.render({ canvasContext: ctxOriginal, viewport }).promise;
+
+        document.getElementById('originalSize').textContent = formatFileSize(file.size);
+
+        const slider = document.getElementById('compressSlider');
+        const qualities = [0.3, 0.6, 0.85];
+        const jpegQuality = qualities[slider.value];
+
+        const compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
+        lastCompressedData = compressedBytes;
+
+        const compressedPdf = await pdfjsLib.getDocument({ data: compressedBytes }).promise;
+        const compressedPage = await compressedPdf.getPage(1);
+
+        const canvasCompressed = document.getElementById('previewCompressed');
+        const ctxCompressed = canvasCompressed.getContext('2d');
+        canvasCompressed.width = viewport.width;
+        canvasCompressed.height = viewport.height;
+        await compressedPage.render({ canvasContext: ctxCompressed, viewport: compressedPage.getViewport({ scale: 0.5 }) }).promise;
+
+        document.getElementById('compressedSize').textContent = formatFileSize(compressedBytes.length);
+    } catch (e) {
+        console.error('Preview error:', e);
+    } finally {
+        previewLoading.style.display = 'none';
+    }
+}
+
+async function compressPdfToImages(pdfArrayBuffer, jpegQuality) {
+    const pdf = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
+    const newPdf = await PDFDocument.create();
+    const scale = jpegQuality < 0.5 ? 1.0 : 1.5;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const jpegBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', jpegQuality));
+        const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+        const jpegImage = await newPdf.embedJpg(jpegBytes);
+
+        const newPage = newPdf.addPage([viewport.width, viewport.height]);
+        newPage.drawImage(jpegImage, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+    }
+
+    return await newPdf.save();
+}
+
+async function executeTask() {
     if (selectedFiles.length === 0) {
         showAlert('알림', '파일을 먼저 선택해주세요.');
         return;
     }
 
+    try {
+        if (currentTool === 'compress') {
+            await executeCompress();
+        } else if (currentTool === 'split') {
+            await executeSplit();
+        } else if (currentTool === 'merge') {
+            await executeMerge();
+        } else if (currentTool === 'unlock') {
+            await executeUnlock();
+        }
+    } catch (e) {
+        closeModal();
+        showAlert('오류', e.message);
+    }
+}
+
+async function executeCompress() {
+    const file = selectedFiles[0];
+
+    const { filePath, canceled } = await window.api.showSaveDialog({
+        defaultPath: file.name.replace('.pdf', '_compressed.pdf'),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+
+    if (canceled) return;
+
     showProgress();
 
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(interval);
-            setTimeout(() => {
-                closeModal();
-                showComplete();
-            }, 500);
+    try {
+        let compressedBytes = lastCompressedData;
+        if (!compressedBytes) {
+            const slider = document.getElementById('compressSlider');
+            const qualities = [0.3, 0.6, 0.85];
+            const jpegQuality = qualities[slider.value];
+            const arrayBuffer = await file.arrayBuffer();
+            compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
         }
-        document.getElementById('progressBar').style.width = progress + '%';
-        document.getElementById('progressPercent').textContent = Math.floor(progress);
-    }, 200);
+
+        const base64 = btoa(String.fromCharCode(...compressedBytes));
+        const result = await window.api.saveCompressedPdf(filePath, base64);
+        closeModal();
+
+        if (result.success) {
+            const savedBytes = file.size - result.size;
+            const savedPercent = ((savedBytes / file.size) * 100).toFixed(1);
+            showAlert('완료', `압축 완료!\n원본: ${formatFileSize(file.size)}\n압축 후: ${formatFileSize(result.size)}\n절감: ${formatFileSize(savedBytes)} (${savedPercent}%)`);
+        } else {
+            showAlert('오류', result.error);
+        }
+    } catch (e) {
+        closeModal();
+        showAlert('오류', e.message);
+    }
+}
+
+async function executeSplit() {
+    const file = selectedFiles[0];
+    const mode = document.querySelector('input[name="splitMode"]:checked').value;
+
+    const { filePaths, canceled } = await window.api.showOpenDialog({
+        properties: ['openDirectory'],
+        title: '분할된 파일을 저장할 폴더 선택'
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) return;
+
+    showProgress();
+
+    try {
+        let result;
+        if (mode === 'each') {
+            result = await window.api.splitPdfEach(file.path, filePaths[0]);
+        } else {
+            const rangeStr = document.getElementById('pageRange').value;
+            if (!rangeStr.trim()) {
+                closeModal();
+                showAlert('알림', '페이지 범위를 입력해주세요.');
+                return;
+            }
+            const ranges = parsePageRanges(rangeStr);
+            result = await window.api.splitPdf(file.path, filePaths[0], ranges);
+        }
+
+        closeModal();
+        showAlert('완료', `${result.files.length}개의 파일로 분할되었습니다.`);
+    } catch (e) {
+        closeModal();
+        showAlert('오류', e.message);
+    }
+}
+
+async function executeMerge() {
+    const paths = selectedFiles.map(f => f.path);
+
+    const { filePath, canceled } = await window.api.showSaveDialog({
+        defaultPath: 'merged.pdf',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+
+    if (canceled) return;
+
+    showProgress();
+
+    try {
+        await window.api.mergePdfs(paths, filePath);
+        closeModal();
+        showAlert('완료', `${selectedFiles.length}개의 PDF가 병합되었습니다.`);
+    } catch (e) {
+        closeModal();
+        showAlert('오류', e.message);
+    }
+}
+
+async function executeUnlock() {
+    const file = selectedFiles[0];
+    const charset = document.querySelector('input[name="charset"]:checked').value;
+
+    const { filePath, canceled } = await window.api.showSaveDialog({
+        defaultPath: file.name.replace('.pdf', '_unlocked.pdf'),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+
+    if (canceled) return;
+
+    const bruteforceProgress = document.getElementById('bruteforceProgress');
+    bruteforceProgress.style.display = 'block';
+
+    window.api.onBruteforceProgress((data) => {
+        const percent = (data.tried / data.total * 100).toFixed(2);
+        document.getElementById('bruteforceBar').style.width = percent + '%';
+        document.getElementById('bruteforceText').textContent = `시도 중: ${data.tried.toLocaleString()} / ${data.total.toLocaleString()}`;
+    });
+
+    showProgress();
+    document.getElementById('progressTitle').textContent = '비밀번호 해제 중...';
+
+    try {
+        const result = await window.api.unlockPdfBruteforce(file.path, filePath, { maxLength: 6, charset });
+
+        closeModal();
+        bruteforceProgress.style.display = 'none';
+
+        if (result.success) {
+            showAlert('성공', `비밀번호를 찾았습니다: ${result.password}`);
+        } else {
+            showAlert('실패', result.error);
+        }
+    } catch (e) {
+        closeModal();
+        bruteforceProgress.style.display = 'none';
+        showAlert('오류', e.message);
+    }
+}
+
+function parsePageRanges(str) {
+    const ranges = [];
+    const parts = str.split(',').map(s => s.trim());
+
+    for (const part of parts) {
+        if (part.includes('-')) {
+            const [start, end] = part.split('-').map(Number);
+            const pages = [];
+            for (let i = start; i <= end; i++) pages.push(i);
+            ranges.push({ name: part, pages });
+        } else {
+            ranges.push({ name: part, pages: [Number(part)] });
+        }
+    }
+    return ranges;
 }
 
 function showProgress() {
@@ -288,13 +572,24 @@ function showProgress() {
     document.querySelectorAll('.alert-modal').forEach(m => m.style.display = 'none');
     document.getElementById('progressContent').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
+
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 5;
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressPercent').textContent = Math.floor(progress);
+    }, 100);
 }
 
 function showComplete() {
     const messages = {
         compress: `${selectedFiles.length}개의 PDF 파일이 압축되었습니다.`,
         split: 'PDF 파일이 분할되었습니다.',
-        merge: `${selectedFiles.length}개의 PDF 파일이 병합되었습니다.`
+        merge: `${selectedFiles.length}개의 PDF 파일이 병합되었습니다.`,
+        unlock: 'PDF 비밀번호가 해제되었습니다.'
     };
 
     document.getElementById('completeMsg').textContent = messages[currentTool];
@@ -305,7 +600,6 @@ function showComplete() {
 
 function downloadResult() {
     closeModal();
-    showAlert('알림', '다운로드 기능은 백엔드 연동 후 사용 가능합니다.');
 }
 
 function showAlert(title, message) {

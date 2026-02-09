@@ -45,7 +45,17 @@ contextBridge.exposeInMainWorld('api', {
     decryptFile: (filePath) => ipcRenderer.invoke('decrypt-file', filePath),
 
     // ===== PDF 편집 =====
-    // (PDF 편집 관련 API가 있다면 여기에 추가)
+    getTempDir: () => ipcRenderer.invoke('get-temp-dir'),
+    showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+    showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
+    getPdfPageCount: (pdfPath) => ipcRenderer.invoke('get-pdf-page-count', pdfPath),
+    getPdfPreview: (pdfPath) => ipcRenderer.invoke('get-pdf-preview', pdfPath),
+    saveCompressedPdf: (outputPath, base64Data) => ipcRenderer.invoke('save-compressed-pdf', outputPath, base64Data),
+    splitPdf: (inputPath, outputDir, ranges) => ipcRenderer.invoke('split-pdf', inputPath, outputDir, ranges),
+    splitPdfEach: (inputPath, outputDir) => ipcRenderer.invoke('split-pdf-each', inputPath, outputDir),
+    mergePdfs: (inputPaths, outputPath) => ipcRenderer.invoke('merge-pdfs', inputPaths, outputPath),
+    unlockPdfBruteforce: (inputPath, outputPath, options) => ipcRenderer.invoke('unlock-pdf-bruteforce', inputPath, outputPath, options),
+    onBruteforceProgress: (callback) => ipcRenderer.on('bruteforce-progress', (_, data) => callback(data))
 
     // ===== AI Agent =====
     // (AI Agent 관련 API가 있다면 여기에 추가)

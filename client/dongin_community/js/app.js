@@ -1,70 +1,6 @@
 const API_BASE = 'http://localhost:8000';
 
-let posts = [
-    {
-        id: 1,
-        category: 'notice',
-        title: 'DONGIN COMMUNITY 오픈 안내',
-        author: 'admin',
-        date: '2024-01-15',
-        content: 'DONGIN COMMUNITY에 오신 것을 환영합니다.\n\n자유롭게 의견을 나누고 소통하는 공간입니다.\n서로 존중하며 건설적인 대화를 나누어주세요.',
-        views: 245,
-        likes: 18,
-        comments: [
-            { author: 'user1', text: '오픈 축하드립니다!', date: '2024-01-15' },
-            { author: 'user2', text: '기대됩니다', date: '2024-01-15' }
-        ]
-    },
-    {
-        id: 2,
-        category: 'question',
-        title: 'PDF Editor 사용법 문의',
-        author: 'user1',
-        date: '2024-01-16',
-        content: 'PDF 파일을 병합하려고 하는데 순서를 바꿀 수 있나요?',
-        views: 89,
-        likes: 5,
-        comments: [
-            { author: 'user3', text: '드래그 앤 드롭으로 순서 변경 가능합니다', date: '2024-01-16' }
-        ]
-    },
-    {
-        id: 3,
-        category: 'suggestion',
-        title: '다크 모드 색상 개선 건의',
-        author: 'user2',
-        date: '2024-01-17',
-        content: '다크 모드 사용 시 일부 텍스트가 잘 안 보여요.\n좀 더 명도를 높여주시면 좋을 것 같습니다.',
-        views: 156,
-        likes: 12,
-        comments: []
-    },
-    {
-        id: 4,
-        category: 'general',
-        title: 'AI Agent 정말 편리하네요',
-        author: 'user3',
-        date: '2024-01-18',
-        content: '업무용으로 사용 중인데 정말 유용합니다.\n특히 문서 작성 기능이 마음에 들어요.',
-        views: 203,
-        likes: 24,
-        comments: [
-            { author: 'user1', text: '저도 잘 쓰고 있습니다!', date: '2024-01-18' }
-        ]
-    },
-    {
-        id: 5,
-        category: 'general',
-        title: '새로운 기능 추가 예정인가요?',
-        author: 'user4',
-        date: '2024-01-19',
-        content: '앞으로 어떤 기능들이 추가될 예정인지 궁금합니다.',
-        views: 178,
-        likes: 8,
-        comments: []
-    }
-];
-
+let posts = [];
 let currentFilter = 'all';
 let currentView = 'list';
 let currentPost = null;
@@ -73,16 +9,20 @@ function getToken() {
     return localStorage.getItem('access_token');
 }
 
+function authHeaders() {
+    const token = getToken();
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+}
+
 async function logEvent(action) {
     const token = getToken();
     if (!token) return;
     try {
         await fetch(`${API_BASE}/api/event`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: authHeaders(),
             body: JSON.stringify({ action })
         });
     } catch {}
@@ -105,14 +45,24 @@ function applyTheme(theme) {
     logEvent(`테마 변경: ${theme === 'dark' ? '어두운 테마' : '밝은 테마'}`);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     loadSavedTheme();
     setTimeout(() => {
         document.body.classList.add('show');
     }, 100);
-    renderPostList();
+    await fetchPosts();
     logEvent('커뮤니티 진입');
 });
+
+async function fetchPosts() {
+    try {
+        const res = await fetch(`${API_BASE}/api/posts`, { headers: authHeaders() });
+        if (res.ok) {
+            posts = await res.json();
+        }
+    } catch {}
+    renderPostList();
+}
 
 function filterCategory(category) {
     document.querySelectorAll('.menu-item').forEach(item => {
@@ -153,7 +103,8 @@ function renderPostList() {
     } else if (currentFilter === 'notice') {
         filteredPosts = posts.filter(p => p.category === 'notice');
     } else if (currentFilter === 'my') {
-        filteredPosts = posts.filter(p => p.author === 'user1');
+        const username = localStorage.getItem('username') || 'user';
+        filteredPosts = posts.filter(p => p.author === username);
     } else if (currentFilter !== 'all') {
         filteredPosts = posts.filter(p => p.category === currentFilter);
     }
@@ -195,11 +146,16 @@ function getCategoryName(category) {
     return names[category] || category;
 }
 
-function viewPost(id) {
-    currentPost = posts.find(p => p.id === id);
-    if (!currentPost) return;
+async function viewPost(id) {
+    try {
+        const res = await fetch(`${API_BASE}/api/posts/${id}`, { headers: authHeaders() });
+        if (!res.ok) return;
+        currentPost = await res.json();
+    } catch { return; }
 
-    currentPost.views++;
+    const idx = posts.findIndex(p => p.id === id);
+    if (idx !== -1) posts[idx] = currentPost;
+
     showView('detail');
     renderPostDetail();
     logEvent(`게시글 조회: ${currentPost.title}`);
@@ -250,25 +206,29 @@ function renderPostDetail() {
     `;
 }
 
-function toggleLike(postId) {
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
+async function toggleLike(postId) {
     const isLiked = localStorage.getItem(`post_${postId}_liked`) === 'true';
-
     if (isLiked) {
-        post.likes--;
         localStorage.removeItem(`post_${postId}_liked`);
+        currentPost.likes = Math.max(0, currentPost.likes - 1);
     } else {
-        post.likes++;
+        try {
+            const res = await fetch(`${API_BASE}/api/posts/${postId}/like`, {
+                method: 'POST',
+                headers: authHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                currentPost.likes = data.likes;
+            }
+        } catch {}
         localStorage.setItem(`post_${postId}_liked`, 'true');
     }
-
     renderPostDetail();
-    logEvent(`게시글 좋아요: ${post.title}`);
+    logEvent(`게시글 좋아요: ${currentPost.title}`);
 }
 
-function submitComment(postId) {
+async function submitComment(postId) {
     const input = document.getElementById('commentInput');
     const text = input.value.trim();
 
@@ -277,18 +237,21 @@ function submitComment(postId) {
         return;
     }
 
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
-    post.comments.push({
-        author: 'user1',
-        text: text,
-        date: new Date().toISOString().split('T')[0]
-    });
+    try {
+        const res = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ text })
+        });
+        if (res.ok) {
+            const comment = await res.json();
+            currentPost.comments.push(comment);
+        }
+    } catch {}
 
     input.value = '';
     renderPostDetail();
-    logEvent(`댓글 작성: ${post.title}`);
+    logEvent(`댓글 작성: ${currentPost.title}`);
 }
 
 function showView(viewName) {
@@ -311,7 +274,7 @@ function showView(viewName) {
     }
 }
 
-function submitPost() {
+async function submitPost() {
     const title = document.getElementById('postTitle').value.trim();
     const category = document.getElementById('postCategory').value;
     const content = document.getElementById('postContent').value.trim();
@@ -321,19 +284,18 @@ function submitPost() {
         return;
     }
 
-    const newPost = {
-        id: posts.length + 1,
-        category: category,
-        title: title,
-        author: 'user1',
-        date: new Date().toISOString().split('T')[0],
-        content: content,
-        views: 0,
-        likes: 0,
-        comments: []
-    };
+    try {
+        const res = await fetch(`${API_BASE}/api/posts`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ title, category, content })
+        });
+        if (res.ok) {
+            const newPost = await res.json();
+            posts.unshift(newPost);
+        }
+    } catch {}
 
-    posts.unshift(newPost);
     showView('list');
     logEvent(`게시글 작성: ${title}`);
 }

@@ -31,10 +31,11 @@ for _name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
     logging.getLogger(_name).setLevel(logging.WARNING)
 
 from database import engine, get_db, Base
-from models import User
+from models import User, Post, Comment
 from schemas import (
     UserCreate, UserUpdate, UserResponse,
-    Token, PasswordChange, EventLog
+    Token, PasswordChange, EventLog,
+    PostCreate, PostResponse, CommentCreate, CommentResponse
 )
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -64,12 +65,36 @@ def init_test_accounts(db: Session):
         ))
     db.commit()
 
+def init_seed_posts(db: Session):
+    if db.query(Post).first():
+        return
+    seeds = [
+        Post(category="notice", title="DONGIN COMMUNITY 오픈 안내", content="DONGIN COMMUNITY에 오신 것을 환영합니다.\n\n자유롭게 의견을 나누고 소통하는 공간입니다.\n서로 존중하며 건설적인 대화를 나누어주세요.", author="admin", views=245, likes=18),
+        Post(category="question", title="PDF Editor 사용법 문의", content="PDF 파일을 병합하려고 하는데 순서를 바꿀 수 있나요?", author="user", views=89, likes=5),
+        Post(category="suggestion", title="다크 모드 색상 개선 건의", content="다크 모드 사용 시 일부 텍스트가 잘 안 보여요.\n좀 더 명도를 높여주시면 좋을 것 같습니다.", author="user", views=156, likes=12),
+        Post(category="general", title="AI Agent 정말 편리하네요", content="업무용으로 사용 중인데 정말 유용합니다.\n특히 문서 작성 기능이 마음에 들어요.", author="user", views=203, likes=24),
+        Post(category="general", title="새로운 기능 추가 예정인가요?", content="앞으로 어떤 기능들이 추가될 예정인지 궁금합니다.", author="user", views=178, likes=8),
+    ]
+    for p in seeds:
+        db.add(p)
+    db.commit()
+    seed_comments = [
+        Comment(post_id=1, author="user", text="오픈 축하드립니다!"),
+        Comment(post_id=1, author="user", text="기대됩니다"),
+        Comment(post_id=2, author="user", text="드래그 앤 드롭으로 순서 변경 가능합니다"),
+        Comment(post_id=4, author="user", text="저도 잘 쓰고 있습니다!"),
+    ]
+    for c in seed_comments:
+        db.add(c)
+    db.commit()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = next(get_db())
     try:
         init_test_accounts(db)
+        init_seed_posts(db)
     finally:
         db.close()
     yield
@@ -283,6 +308,117 @@ async def log_event(
 ):
     logger.info(f"{current_user.username} | {event.action}")
     return {"message": "ok"}
+
+def _post_to_dict(post: Post) -> dict:
+    return {
+        "id": post.id,
+        "category": post.category,
+        "title": post.title,
+        "content": post.content,
+        "author": post.author,
+        "date": post.created_at.strftime("%Y-%m-%d") if post.created_at else "",
+        "views": post.views,
+        "likes": post.likes,
+        "comments": [
+            {
+                "id": c.id,
+                "post_id": c.post_id,
+                "author": c.author,
+                "text": c.text,
+                "date": c.created_at.strftime("%Y-%m-%d") if c.created_at else ""
+            }
+            for c in post.comments
+        ]
+    }
+
+@app.get("/api/posts")
+async def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(Post).order_by(Post.created_at.desc()).all()
+    return [_post_to_dict(p) for p in posts]
+
+@app.get("/api/posts/{post_id}")
+async def get_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글 없음")
+    post.views += 1
+    db.commit()
+    db.refresh(post)
+    return _post_to_dict(post)
+
+@app.post("/api/posts", status_code=status.HTTP_201_CREATED)
+async def create_post(
+    post_data: PostCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    post = Post(
+        title=post_data.title,
+        category=post_data.category,
+        content=post_data.content,
+        author=current_user.username
+    )
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    logger.info(f"{current_user.username} | 게시글 작성: {post.title}")
+    return _post_to_dict(post)
+
+@app.delete("/api/posts/{post_id}")
+async def delete_post(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글 없음")
+    if post.author != current_user.username and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="삭제 권한 없음")
+    db.delete(post)
+    db.commit()
+    logger.info(f"{current_user.username} | 게시글 삭제: {post.title}")
+    return {"message": "삭제 완료"}
+
+@app.post("/api/posts/{post_id}/like")
+async def toggle_like(
+    post_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글 없음")
+    post.likes += 1
+    db.commit()
+    return {"likes": post.likes}
+
+@app.post("/api/posts/{post_id}/comments", status_code=status.HTTP_201_CREATED)
+async def create_comment(
+    post_id: int,
+    comment_data: CommentCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글 없음")
+    comment = Comment(
+        post_id=post_id,
+        author=current_user.username,
+        text=comment_data.text
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    logger.info(f"{current_user.username} | 댓글 작성: {post.title}")
+    return {
+        "id": comment.id,
+        "post_id": comment.post_id,
+        "author": comment.author,
+        "text": comment.text,
+        "date": comment.created_at.strftime("%Y-%m-%d") if comment.created_at else ""
+    }
 
 if __name__ == "__main__":
     uvicorn.run(

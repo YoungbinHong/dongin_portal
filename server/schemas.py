@@ -44,3 +44,35 @@ class LoginRequest(BaseModel):
 
 class EventLog(BaseModel):
     action: str
+
+class CommentCreate(BaseModel):
+    text: str = Field(..., min_length=1)
+
+class CommentResponse(BaseModel):
+    id: int
+    post_id: int
+    author: str
+    text: str
+    date: str
+
+    class Config:
+        from_attributes = True
+
+class PostCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(default="general")
+    content: str = Field(..., min_length=1)
+
+class PostResponse(BaseModel):
+    id: int
+    category: str
+    title: str
+    content: str
+    author: str
+    date: str
+    views: int
+    likes: int
+    comments: list[CommentResponse]
+
+    class Config:
+        from_attributes = True
