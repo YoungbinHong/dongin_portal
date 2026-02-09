@@ -51,24 +51,7 @@ async function loadAccounts() {
         if (!res.ok) throw new Error();
         accounts = await res.json();
         renderAccounts();
-        updateServerStatus(true);
     } catch {
-        updateServerStatus(false);
-    }
-}
-
-function updateServerStatus(connected) {
-    const dot = document.querySelector('.server-status-dot');
-    const text = document.querySelector('.server-status-text');
-    const tooltip = document.querySelector('.server-tooltip');
-    if (connected) {
-        dot.style.background = '#00b894';
-        text.textContent = '연결됨';
-        tooltip.textContent = '서버와 연결되었습니다.';
-    } else {
-        dot.style.background = '#ff7675';
-        text.textContent = '연결 끊김';
-        tooltip.textContent = '서버와 연결할 수 없습니다.';
     }
 }
 

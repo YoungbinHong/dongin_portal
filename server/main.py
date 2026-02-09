@@ -91,10 +91,19 @@ def init_seed_posts(db: Session):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from sqlalchemy import text, inspect as sa_inspect
+    insp = sa_inspect(engine)
+    cols = [c["name"] for c in insp.get_columns("users")]
+    if "last_heartbeat" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_heartbeat TIMESTAMPTZ"))
     db = next(get_db())
     try:
         init_test_accounts(db)
         init_seed_posts(db)
+        db.query(User).update({User.last_heartbeat: None})
+        db.commit()
+        logger.info("서버 시작 | 모든 heartbeat 초기화")
     finally:
         db.close()
     yield
@@ -295,6 +304,15 @@ async def delete_user(
     db.commit()
     logger.info(f"{current_user.username} | 사용자 삭제: {username}")
     return {"message": "삭제 완료"}
+
+@app.post("/api/heartbeat")
+async def heartbeat(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    current_user.last_heartbeat = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    db.commit()
+    return {"status": "ok"}
 
 @app.post("/api/auth/logout")
 async def logout(current_user: User = Depends(get_current_user)):

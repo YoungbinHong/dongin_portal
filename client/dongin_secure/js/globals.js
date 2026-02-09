@@ -14,8 +14,6 @@ let currentSort = null;
 let sortDirection = null;
 let originalFiles = [];
 let lastSelectedPath = null;
-let serverConnected = true;
-
 let tutorialStep = 0;
 let currentHighlightedElement = null;
 

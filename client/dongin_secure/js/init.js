@@ -24,7 +24,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAutoLogout();
     initDragSelection();
 
-    updateServerStatus();
-    setInterval(updateServerStatus, 1000);
     checkAutoStartStatus();
 });

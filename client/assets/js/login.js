@@ -2,7 +2,9 @@ const API_BASE = 'http://localhost:8000';
 
 (function() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('from') === 'logout') {
+    var fromLogout = params.get('from') === 'logout' || localStorage.getItem('fromLogout') === '1';
+    if (fromLogout) {
+        localStorage.removeItem('fromLogout');
         document.querySelector('.wave-wrapper').classList.add('from-logout');
         document.querySelector('.login-wrapper').classList.add('from-logout');
         history.replaceState(null, '', 'login.html');
@@ -77,6 +79,8 @@ document.querySelectorAll('input').forEach(input => {
 
 document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
+        const btn = document.querySelector('.login-form button');
+        if (btn && btn.disabled) return;
         checkLogin();
     }
 });
