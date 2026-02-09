@@ -361,14 +361,18 @@ ipcMain.handle('split-pdf', async (event, inputPath, outputDir, ranges) => {
         const pdfBytes = await fsPromises.readFile(inputPath);
         const pdfDoc = await PDFDocument.load(pdfBytes);
         const results = [];
+        const baseName = path.basename(inputPath, '.pdf');
 
-        for (const range of ranges) {
+        for (let i = 0; i < ranges.length; i++) {
+            const range = ranges[i];
             const newPdf = await PDFDocument.create();
             const pages = await newPdf.copyPages(pdfDoc, range.pages.map(p => p - 1));
             pages.forEach(page => newPdf.addPage(page));
 
             const newBytes = await newPdf.save();
-            const outPath = path.join(outputDir, `split_${range.name}.pdf`);
+            const outPath = ranges.length === 1
+                ? path.join(outputDir, `${baseName}_splited.pdf`)
+                : path.join(outputDir, `${baseName}_splited_${i + 1}.pdf`);
             await fsPromises.writeFile(outPath, newBytes);
             results.push(outPath);
         }

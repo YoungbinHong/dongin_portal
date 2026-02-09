@@ -156,24 +156,13 @@
 
             <div class="options-panel" id="optionsPanel" style="display:none;">
                 <div id="splitOptions" class="tool-options" style="display:none;">
-                    <div class="option-title">분할 방식</div>
-                    <div class="option-group">
-                        <label class="option-card active" data-mode="range">
-                            <input type="radio" name="splitMode" value="range" checked>
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
-                            <div class="option-name">페이지 범위</div>
-                            <div class="option-desc">원하는 페이지만 추출</div>
-                        </label>
-                        <label class="option-card" data-mode="each">
-                            <input type="radio" name="splitMode" value="each">
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg></div>
-                            <div class="option-name">개별 분할</div>
-                            <div class="option-desc">모든 페이지를 개별 파일로</div>
-                        </label>
-                    </div>
-                    <div class="range-input-group" id="rangeInputGroup">
-                        <label>페이지 범위</label>
-                        <input type="text" id="pageRange" placeholder="예: 1-5, 8, 10-12">
+                    <div class="split-thumbnail-container" id="splitThumbnailContainer">
+                        <p class="option-hint" style="margin-bottom: 15px; color: #636e72; font-size: 13px;">클릭으로 페이지 선택/해제, Shift+클릭으로 범위 선택</p>
+                        <div class="split-thumbnail-grid" id="splitThumbnailGrid"></div>
+                        <div class="split-thumbnail-loading" id="splitThumbnailLoading" style="display:none;">
+                            <div class="preview-spinner"></div>
+                            <span>페이지 로딩 중...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -217,9 +206,12 @@
                 </div>
             </div>
 
-            <button class="execute-btn" id="executeBtn" style="display:none;" onclick="executeTask()">
-                <span id="executeBtnText">PDF 압축하기</span>
-            </button>
+            <div class="button-group" style="display: none; width: 100%; max-width: 600px; gap: 10px;">
+                <button class="clear-split-btn" id="clearSplitBtn" style="display:none;" onclick="clearSplitSelection()">모두 해제</button>
+                <button class="execute-btn" id="executeBtn" onclick="executeTask()">
+                    <span id="executeBtnText">PDF 압축하기</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -245,6 +237,24 @@
             <div style="display: flex; gap: 10px;">
                 <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
                 <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmGoToMenu()">확인</button>
+            </div>
+        </div>
+
+        <div id="toolChangeContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">기능 전환</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">현재 작업 중인 내용이 모두 삭제됩니다. 계속하시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
+                <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmToolChange()">확인</button>
+            </div>
+        </div>
+
+        <div id="dividerConfirm" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">분할 확인</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;" id="dividerConfirmMsg">페이지 뒤에서 파일을 나누시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
+                <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmDivider()">확인</button>
             </div>
         </div>
 
