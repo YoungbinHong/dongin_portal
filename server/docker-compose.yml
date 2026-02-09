@@ -23,6 +23,7 @@ services:
       - db
     volumes:
       - .:/app
+      - ./logs:/app/logs
     command: uvicorn main:app --host 0.0.0.0 --reload --no-access-log
 
 volumes:

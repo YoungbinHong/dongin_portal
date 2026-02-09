@@ -160,7 +160,7 @@ const cardGap = 24;
 const cardTotal = cardWidth + cardGap;
 const cardCount = originalCards.length;
 
-let currentOffset = 0;
+let currentOffset = -cardTotal * 2;
 let scrollVelocity = 0;
 let isAnimating = false;
 let isDragging = false;

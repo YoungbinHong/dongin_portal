@@ -6,6 +6,10 @@ body {
     background-color: #f8faff;
     overflow: hidden;
     position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .wave-wrapper {
@@ -116,6 +120,10 @@ input {
     outline: none;
     transition: 0.3s;
     cursor: text;
+    user-select: auto;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
 }
 
 button {

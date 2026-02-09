@@ -6,3 +6,4 @@ api_key
 .aider*
 .env
 .claude/
+server/logs/
