@@ -1,9 +1,38 @@
-client/node_modules/
-client/dist/
+# Python
 __pycache__/
 *.pyc
-api_key
-.aider*
-.env
-.claude/
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Node.js
+client/node_modules/
+client/package-lock.json
+
+# Build outputs
+client/dist/
+server/updates/*.exe
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
 server/logs/
+*.log
+
+# Environment
+.env
+api_key
+
+# IDE/Tools
+.vscode/
+.aider*
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -48,12 +48,6 @@ def setup_logger():
     error_file.setFormatter(formatter)
     system_logger.addHandler(error_file)
 
-    # uvicorn 로거 설정
-    for logger_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
-        uvicorn_logger = logging.getLogger(logger_name)
-        uvicorn_logger.setLevel(logging.WARNING)
-        uvicorn_logger.propagate = False
-
     return system_logger
 
 def get_access_logger():

@@ -229,6 +229,116 @@ async def serve_latest_yml():
         raise HTTPException(status_code=404, detail="latest.yml not found")
     return FileResponse(path, media_type="text/yaml")
 
+@app.get("/download")
+async def download_page():
+    from fastapi.responses import HTMLResponse
+    version, path_val = _parse_latest_yml()
+    if not version or not path_val:
+        raise HTTPException(status_code=404, detail="설치 파일이 없습니다")
+
+    file_path = os.path.join(UPDATES_DIR, path_val)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="설치 파일이 없습니다")
+
+    file_size = os.path.getsize(file_path)
+    file_size_mb = file_size / (1024 * 1024)
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DONGIN PORTAL 다운로드</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }}
+            .container {{
+                background: white;
+                border-radius: 20px;
+                padding: 60px 40px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                text-align: center;
+                max-width: 500px;
+                width: 100%;
+            }}
+            h1 {{
+                color: #333;
+                font-size: 32px;
+                margin-bottom: 10px;
+            }}
+            .version {{
+                color: #666;
+                font-size: 18px;
+                margin-bottom: 30px;
+            }}
+            .info {{
+                color: #888;
+                font-size: 14px;
+                margin-bottom: 40px;
+            }}
+            .download-btn {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 18px 50px;
+                font-size: 18px;
+                font-weight: 600;
+                border-radius: 50px;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+                text-decoration: none;
+                display: inline-block;
+            }}
+            .download-btn:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            }}
+            .download-btn:active {{
+                transform: translateY(0);
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>DONGIN PORTAL</h1>
+            <div class="version">버전 {version}</div>
+            <div class="info">파일 크기: {file_size_mb:.1f} MB</div>
+            <a href="/download/latest" class="download-btn">다운로드</a>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
+
+@app.get("/download/latest")
+async def download_latest():
+    version, path_val = _parse_latest_yml()
+    if not version or not path_val:
+        raise HTTPException(status_code=404, detail="설치 파일이 없습니다")
+
+    file_path = os.path.join(UPDATES_DIR, path_val)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="설치 파일이 없습니다")
+
+    filename = os.path.basename(path_val)
+    logger.info(f"[다운로드] 파일: {filename} | 버전: {version}")
+
+    return FileResponse(
+        file_path,
+        media_type="application/octet-stream",
+        filename=filename,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 app.mount("/updates", StaticFiles(directory=UPDATES_DIR), name="updates")
 
 @app.get("/")
@@ -841,6 +951,7 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        workers=4,
+        workers=1,
         limit_concurrency=400,
+        log_level="info"
     )
