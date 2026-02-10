@@ -85,3 +85,15 @@ class PostResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SendOtpRequest(BaseModel):
+    email: str = Field(..., min_length=1)
+
+class VerifyOtpRequest(BaseModel):
+    email: str = Field(..., min_length=1)
+    otp: str = Field(..., min_length=6, max_length=6)
+
+class SignupRequest(BaseModel):
+    email: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=8)
+    name: str = Field(..., min_length=1, max_length=100)

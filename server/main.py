@@ -12,6 +12,11 @@ import os
 import time
 import datetime
 import asyncio
+import random
+import aiosmtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email_validator import validate_email, EmailNotValidError
 from logger import logger, get_user_logger, get_access_logger, get_event_logger
 
 from database import engine, get_db, Base
@@ -21,6 +26,7 @@ from schemas import (
     Token, PasswordChange, EventLog,
     PostCreate, PostResponse, CommentCreate, CommentResponse,
     AiChatRequest,
+    SendOtpRequest, VerifyOtpRequest, SignupRequest,
 )
 import ai_engine
 from auth import (
@@ -33,6 +39,9 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 ai_queue = asyncio.Queue()
 ai_processing = False
 ai_lock = asyncio.Lock()
+
+otp_store = {}
+verified_emails = {}
 
 def init_test_accounts(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
@@ -94,6 +103,10 @@ async def lifespan(app: FastAPI):
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN last_heartbeat TIMESTAMPTZ"))
         logger.info("데이터베이스 스키마 업데이트 완료 (last_heartbeat 컬럼 추가)")
+    if "email" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE"))
+        logger.info("데이터베이스 스키마 업데이트 완료 (email 컬럼 추가)")
 
     db = next(get_db())
     try:
@@ -225,6 +238,143 @@ async def root():
 @app.get("/health")
 async def health(db: Session = Depends(get_db)):
     return {"status": "ok"}
+
+async def send_otp_email(email: str, otp: str):
+    dev_mode = os.getenv("DEV_MODE", "true").lower() == "true"
+
+    if dev_mode:
+        logger.info(f"[개발 모드] OTP 발송 → 이메일: {email} | 인증번호: {otp}")
+        print(f"\n{'='*50}")
+        print(f"[OTP 인증번호]")
+        print(f"이메일: {email}")
+        print(f"인증번호: {otp}")
+        print(f"{'='*50}\n")
+        return
+
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv("SMTP_FROM", smtp_user)
+
+    if not smtp_host or not smtp_user or not smtp_password:
+        raise HTTPException(status_code=500, detail="SMTP 설정이 필요합니다")
+
+    msg = MIMEMultipart()
+    msg["From"] = smtp_from
+    msg["To"] = email
+    msg["Subject"] = "[DONGIN PORTAL] 이메일 인증번호"
+
+    body = f"""안녕하세요.
+회원가입을 위한 인증번호는 다음과 같습니다.
+
+인증번호: {otp}
+
+인증번호는 5분간 유효합니다."""
+
+    msg.attach(MIMEText(body, "plain"))
+
+    if smtp_port == 465:
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            use_tls=True,
+        )
+    else:
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            start_tls=True,
+        )
+
+@app.post("/api/auth/send-otp")
+async def send_otp(request: SendOtpRequest):
+    try:
+        validate_email(request.email)
+    except EmailNotValidError:
+        raise HTTPException(status_code=400, detail="올바른 이메일 형식이 아닙니다")
+
+    otp = str(random.randint(100000, 999999))
+
+    try:
+        await send_otp_email(request.email, otp)
+    except Exception as e:
+        logger.error(f"[OTP 발송 실패] 이메일: {request.email} | 오류: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"이메일 발송 실패: {str(e)}")
+
+    otp_store[request.email] = {
+        "otp": otp,
+        "expires_at": time.time() + 300
+    }
+
+    logger.info(f"[OTP 발송 완료] 이메일: {request.email}")
+    return {"success": True}
+
+@app.post("/api/auth/verify-otp")
+async def verify_otp(request: VerifyOtpRequest):
+    stored = otp_store.get(request.email)
+
+    if not stored:
+        raise HTTPException(status_code=400, detail="OTP를 먼저 요청해주세요")
+
+    if time.time() > stored["expires_at"]:
+        del otp_store[request.email]
+        raise HTTPException(status_code=400, detail="OTP가 만료되었습니다")
+
+    if stored["otp"] != request.otp:
+        raise HTTPException(status_code=400, detail="OTP가 일치하지 않습니다")
+
+    verified_emails[request.email] = time.time() + 300
+    del otp_store[request.email]
+
+    logger.info(f"[OTP 인증 완료] 이메일: {request.email}")
+    return {"verified": True}
+
+@app.post("/api/auth/signup")
+async def signup(request: SignupRequest, db: Session = Depends(get_db)):
+    verified_time = verified_emails.get(request.email)
+
+    if not verified_time or time.time() > verified_time:
+        raise HTTPException(status_code=400, detail="이메일 인증이 필요합니다")
+
+    try:
+        validate_email(request.email)
+    except EmailNotValidError:
+        raise HTTPException(status_code=400, detail="올바른 이메일 형식이 아닙니다")
+
+    if db.query(User).filter(User.email == request.email).first():
+        raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다")
+
+    if len(request.password) < 8:
+        raise HTTPException(status_code=400, detail="비밀번호는 8자 이상이어야 합니다")
+
+    username = request.email
+
+    user = User(
+        username=username,
+        email=request.email,
+        hashed_password=get_password_hash(request.password),
+        name=request.name,
+        position="일반",
+        role="user",
+        is_active=True
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    del verified_emails[request.email]
+
+    logger.info(f"[회원가입 완료] 이메일: {request.email} | 사용자명: {username}")
+    return {"success": True}
+
 
 @app.post("/api/auth/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
