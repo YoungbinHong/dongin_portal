@@ -81,7 +81,7 @@ body.dark-theme .titlebar-title {
 }
 
 body.dark-theme .titlebar-button {
-    color: #b0b3c7;
+    color: #d0d0d0;
 }
 
 .titlebar-button:hover {
@@ -102,6 +102,11 @@ body.dark-theme .titlebar-button:active {
 }
 
 .titlebar-button.close:hover {
+    background: #e81123;
+    color: white;
+}
+
+body.dark-theme .titlebar-button.close:hover {
     background: #e81123;
     color: white;
 }

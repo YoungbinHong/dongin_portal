@@ -562,3 +562,40 @@ body.dark-theme .logout-overlay {
 body.dark-theme .page-transition {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
+
+.modal-btn {
+    flex: 1;
+    border: none;
+    padding: 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.modal-btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #2d3436;
+}
+
+.modal-btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-btn-confirm {
+    background: #a29bfe;
+    color: white;
+}
+
+.modal-btn-confirm:hover {
+    background: #9189f5;
+}

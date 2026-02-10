@@ -437,11 +437,11 @@ body.dark-theme input::placeholder {
     color: #888;
 }
 
-body.dark-theme button {
+body.dark-theme .login-form button {
     background: #a29bfe;
 }
 
-body.dark-theme button:hover {
+body.dark-theme .login-form button:hover {
     background: #6c5ce7;
 }
 
