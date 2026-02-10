@@ -37,7 +37,7 @@ document.addEventListener('keydown', (e) => {
 async function checkLogin() {
     const username = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const btn = document.querySelector('button');
+    const btn = document.querySelector('.login-form button');
     const errorBox = document.getElementById('errorBox');
 
     if (!username || !password) {
@@ -94,7 +94,7 @@ async function checkLogin() {
     }
 }
 
-document.querySelectorAll('input').forEach(input => {
+document.querySelectorAll('.login-form input').forEach(input => {
     input.addEventListener('input', () => {
         document.getElementById('errorBox').classList.remove('show');
     });

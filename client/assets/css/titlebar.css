@@ -15,7 +15,6 @@
     z-index: 10000;
     -webkit-app-region: drag;
     user-select: none;
-    transition: all 0.2s ease;
 }
 
 body.dark-theme .titlebar {
@@ -72,7 +71,7 @@ body.dark-theme .titlebar-title {
     border: none;
     background: transparent;
     color: #5a6c7d;
-    cursor: pointer;
+    cursor: default;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -111,14 +110,4 @@ body.dark-theme .titlebar-button:active {
     width: 10px;
     height: 10px;
     fill: currentColor;
-}
-
-.titlebar-button.maximize svg {
-    width: 9px;
-    height: 9px;
-}
-
-.titlebar-button.close svg {
-    width: 11px;
-    height: 11px;
 }

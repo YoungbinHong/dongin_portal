@@ -68,6 +68,7 @@ async function checkUpdate() {
         document.querySelector('.update-wrapper').classList.add('success');
         await delay(800);
         document.getElementById('latestModal').classList.add('show');
+        setTimeout(closeLatestModal, 3000);
         return;
     }
 
@@ -86,12 +87,14 @@ async function checkUpdate() {
     setTimeout(() => window.api.goToLogin(), 2000);
 }
 
-document.getElementById('latestModalBtn').addEventListener('click', () => {
+function closeLatestModal() {
     const modal = document.getElementById('latestModal');
     modal.classList.add('hide');
     modal.addEventListener('animationend', () => {
         window.api.goToLogin();
     }, { once: true });
-});
+}
+
+document.getElementById('latestModalBtn').addEventListener('click', closeLatestModal);
 
 checkUpdate();
