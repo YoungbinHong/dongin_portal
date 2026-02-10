@@ -1,5 +1,5 @@
 (function () {
-    const API_BASE = 'http://localhost:8000';
+    const API_BASE = 'http://192.168.0.254:8000';
     const HEALTH_URL = API_BASE + '/health';
     const HEARTBEAT_URL = API_BASE + '/api/heartbeat';
     const CHECK_INTERVAL = 5000;

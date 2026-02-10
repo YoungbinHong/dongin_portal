@@ -1,2 +1,2 @@
 provider: generic
-url: http://localhost:8000/updates
+url: http://192.168.0.254:8000/updates

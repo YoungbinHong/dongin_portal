@@ -278,3 +278,210 @@ button.success-btn::after {
         transform: scale(1.5);
     }
 }
+
+.settings-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+}
+
+.settings-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: #636e72;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-modal {
+    display: none;
+    background: white;
+    border-radius: 20px;
+    width: 500px;
+    max-width: 90vw;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.settings-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2d3436;
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 20px;
+    color: #636e72;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.settings-body {
+    padding: 25px;
+}
+
+.setting-group {
+    margin-bottom: 20px;
+}
+
+.setting-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 10px;
+}
+
+.setting-group select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    cursor: pointer;
+    background: white;
+}
+
+body.dark-theme {
+    background-color: #1a1a2e;
+}
+
+body.dark-theme .wave {
+    background: linear-gradient(135deg, #6c5ce7 0%, #4834d4 100%);
+    opacity: 0.25;
+}
+
+body.dark-theme .wave:nth-child(2) {
+    background: linear-gradient(135deg, #e84393 0%, #a29bfe 100%);
+    opacity: 0.15;
+}
+
+body.dark-theme .wave:nth-child(3) {
+    background: linear-gradient(135deg, #00cec9 0%, #6c5ce7 100%);
+    opacity: 0.15;
+}
+
+body.dark-theme .login-card {
+    background: rgba(30, 30, 46, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme h1 {
+    color: #ffffff;
+}
+
+body.dark-theme .login-card h1 span:first-child {
+    color: #ffffff !important;
+}
+
+body.dark-theme input {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+body.dark-theme input::placeholder {
+    color: #888;
+}
+
+body.dark-theme button {
+    background: #a29bfe;
+}
+
+body.dark-theme button:hover {
+    background: #6c5ce7;
+}
+
+body.dark-theme .settings-btn {
+    background: rgba(40, 40, 60, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .settings-btn:hover {
+    background: rgba(60, 60, 80, 0.9);
+}
+
+body.dark-theme .settings-btn svg {
+    fill: #b0b0b0;
+}
+
+body.dark-theme .modal-overlay {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+body.dark-theme .settings-modal {
+    background: #1e1e2e;
+}
+
+body.dark-theme .settings-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .settings-header h2 {
+    color: #ffffff;
+}
+
+body.dark-theme .close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #b0b0b0;
+}
+
+body.dark-theme .setting-label {
+    color: #ffffff;
+}
+
+body.dark-theme .setting-group select {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}

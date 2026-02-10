@@ -1,4 +1,27 @@
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://192.168.0.254:8000';
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSavedTheme();
+});
+
+function openSettings() {
+    document.getElementById('settingsContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) themeSelect.value = localStorage.getItem('donginTheme') || 'light';
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').style.display = 'none';
+    document.getElementById('settingsContent').style.display = 'none';
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modalOverlay');
+        if (modal && modal.style.display === 'flex') closeModal();
+    }
+});
 
 (function() {
     const params = new URLSearchParams(window.location.search);
