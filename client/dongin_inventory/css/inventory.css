@@ -1,0 +1,245 @@
+.inventory-header {
+    padding: 25px 30px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+}
+
+.header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2d3436;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+#searchInput {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    width: 250px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+#searchInput:focus {
+    border-color: #e17055;
+}
+
+.add-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #e17055 0%, #d35400 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(225, 112, 85, 0.3);
+}
+
+.add-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: white;
+}
+
+.inventory-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px 30px;
+}
+
+.inventory-content::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.inventory-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.inventory-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.inventory-table thead {
+    background: #f8f9fa;
+}
+
+.inventory-table th {
+    padding: 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: #636e72;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+}
+
+.inventory-table td {
+    padding: 16px;
+    font-size: 14px;
+    color: #2d3436;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.inventory-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.item-name {
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-electronics {
+    background: rgba(116, 185, 255, 0.15);
+    color: #0984e3;
+}
+
+.badge-office {
+    background: rgba(255, 118, 117, 0.15);
+    color: #d63031;
+}
+
+.badge-furniture {
+    background: rgba(253, 203, 110, 0.15);
+    color: #e17055;
+}
+
+.badge-etc {
+    background: rgba(99, 110, 114, 0.15);
+    color: #636e72;
+}
+
+.status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-available {
+    background: rgba(0, 184, 148, 0.15);
+    color: #00b894;
+}
+
+.status-low {
+    background: rgba(255, 177, 66, 0.15);
+    color: #ff9f43;
+}
+
+.status-out {
+    background: rgba(255, 118, 117, 0.15);
+    color: #d63031;
+}
+
+.action-btn {
+    padding: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.action-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: #636e72;
+}
+
+body.dark-theme .inventory-header {
+    background: #1e1e2e;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .header-title {
+    color: #ffffff;
+}
+
+body.dark-theme #searchInput {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+body.dark-theme #searchInput:focus {
+    border-color: #e17055;
+}
+
+body.dark-theme .inventory-content {
+    background: #16213e;
+}
+
+body.dark-theme .inventory-table {
+    background: #1e1e2e;
+}
+
+body.dark-theme .inventory-table thead {
+    background: #2a2a3e;
+}
+
+body.dark-theme .inventory-table th {
+    color: #888;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .inventory-table td {
+    color: #ffffff;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .inventory-table tbody tr:hover {
+    background: #2a2a3e;
+}
+
+body.dark-theme .action-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .action-btn svg {
+    fill: #b0b0b0;
+}

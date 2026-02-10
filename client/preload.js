@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('api', {
     checkUpdate: (baseUrl, version) => ipcRenderer.invoke('check-update', baseUrl, version),
     downloadAndInstall: (fullUrl) => ipcRenderer.invoke('download-and-install', fullUrl),
 
+    // ===== 윈도우 컨트롤 =====
+    windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+    windowMaximize: () => ipcRenderer.invoke('window-maximize'),
+    windowClose: () => ipcRenderer.invoke('window-close'),
+    windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+
     // ===== 경로 관련 =====
     getHomePath: () => ipcRenderer.invoke('get-home-path'),
     getPlatform: () => ipcRenderer.invoke('get-platform'),

@@ -12,6 +12,7 @@ body {
     background: var(--bg);
     font-family: 'Pretendard', sans-serif;
     overflow: hidden;
+    padding-top: 32px;
 }
 
 .sidebar {

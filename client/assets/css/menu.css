@@ -5,7 +5,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 52px 20px 20px 20px;
     user-select: none;
     -webkit-user-select: none;
 }
@@ -208,6 +208,30 @@ body {
 .card-community .card-badge {
     background: rgba(253, 121, 168, 0.15);
     color: #e84393;
+}
+
+.card-chat .card-icon {
+    background: linear-gradient(135deg, #55efc4 0%, #00cec9 100%);
+}
+
+.card-chat .card-subtitle {
+    color: #55efc4;
+}
+
+.card-inventory .card-icon {
+    background: linear-gradient(135deg, #e17055 0%, #d35400 100%);
+}
+
+.card-inventory .card-subtitle {
+    color: #e17055;
+}
+
+.card-docs .card-icon {
+    background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+}
+
+.card-docs .card-subtitle {
+    color: #26de81;
 }
 
 .card-coming .card-icon {

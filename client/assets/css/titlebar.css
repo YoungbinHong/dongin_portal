@@ -1,0 +1,124 @@
+.titlebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    z-index: 10000;
+    -webkit-app-region: drag;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+body.dark-theme .titlebar {
+    background: linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(26, 26, 46, 0.9) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 8px;
+}
+
+.titlebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2c3e50;
+    letter-spacing: 0.5px;
+}
+
+body.dark-theme .titlebar-logo {
+    color: #e8eaf6;
+}
+
+.titlebar-logo img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.titlebar-title {
+    font-size: 11px;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+body.dark-theme .titlebar-title {
+    color: #b0b3c7;
+}
+
+.titlebar-controls {
+    display: flex;
+    align-items: center;
+    -webkit-app-region: no-drag;
+}
+
+.titlebar-button {
+    width: 46px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: #5a6c7d;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    font-size: 10px;
+    position: relative;
+}
+
+body.dark-theme .titlebar-button {
+    color: #b0b3c7;
+}
+
+.titlebar-button:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .titlebar-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.titlebar-button:active {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+}
+
+body.dark-theme .titlebar-button:active {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.titlebar-button.close:hover {
+    background: #e81123;
+    color: white;
+}
+
+.titlebar-button svg {
+    width: 10px;
+    height: 10px;
+    fill: currentColor;
+}
+
+.titlebar-button.maximize svg {
+    width: 9px;
+    height: 9px;
+}
+
+.titlebar-button.close svg {
+    width: 11px;
+    height: 11px;
+}

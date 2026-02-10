@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN DOCS</title>
+    <link rel="icon" href="../assets/images/logo.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/docs.css">
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-main">DONGIN</div>
+            <div class="logo-sub">DOCS</div>
+        </div>
+
+        <div class="doc-types">
+            <div class="doc-type-label">서류 종류</div>
+            <div class="doc-type-item active" data-type="employment">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <div>
+                    <div class="doc-type-name">재직증명서</div>
+                    <div class="doc-type-desc">재직 사실 증명</div>
+                </div>
+            </div>
+            <div class="doc-type-item" data-type="career">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <div>
+                    <div class="doc-type-name">경력증명서</div>
+                    <div class="doc-type-desc">경력 사항 증명</div>
+                </div>
+            </div>
+            <div class="doc-type-item" data-type="salary">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <div>
+                    <div class="doc-type-name">급여명세서</div>
+                    <div class="doc-type-desc">급여 상세 내역</div>
+                </div>
+            </div>
+            <div class="doc-type-item" data-type="income">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                <div>
+                    <div class="doc-type-name">소득증명서</div>
+                    <div class="doc-type-desc">소득 금액 증명</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="footer-icon" onclick="goHome()" title="메뉴로 돌아가기">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
+            <div class="footer-icon" onclick="openSettings()" title="설정">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="docs-header">
+            <div class="header-title">재직증명서 발급</div>
+            <button class="history-btn" onclick="showHistory()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                </svg>
+                <span>발급 내역</span>
+            </button>
+        </div>
+
+        <div class="docs-content">
+            <div class="request-form">
+                <div class="form-section">
+                    <div class="section-title">신청자 정보</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" value="홍길동" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>사원번호</label>
+                            <input type="text" value="2024-001" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>부서</label>
+                            <input type="text" value="개발팀" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>직급</label>
+                            <input type="text" value="대리" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">발급 정보</div>
+                    <div class="form-group">
+                        <label>용도</label>
+                        <input type="text" placeholder="예: 은행 제출용">
+                    </div>
+                    <div class="form-group">
+                        <label>발급 부수</label>
+                        <select>
+                            <option>1부</option>
+                            <option>2부</option>
+                            <option>3부</option>
+                            <option>4부</option>
+                            <option>5부</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>비고</label>
+                        <textarea rows="3" placeholder="추가 요청사항이 있으면 입력해주세요"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="preview-btn">미리보기</button>
+                    <button class="submit-btn">발급 신청</button>
+                </div>
+            </div>
+
+            <div class="doc-preview">
+                <div class="preview-header">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                    <span>문서 미리보기</span>
+                </div>
+                <div class="preview-content">
+                    <div class="preview-doc">
+                        <h2>재직증명서</h2>
+                        <div class="doc-info">
+                            <p><strong>성명:</strong> 홍길동</p>
+                            <p><strong>생년월일:</strong> 1990년 1월 1일</p>
+                            <p><strong>부서:</strong> 개발팀</p>
+                            <p><strong>직급:</strong> 대리</p>
+                            <p><strong>입사일:</strong> 2020년 3월 1일</p>
+                        </div>
+                        <div class="doc-body">
+                            <p>위 사람은 본 회사에 재직 중임을 증명합니다.</p>
+                        </div>
+                        <div class="doc-footer">
+                            <p>2024년 2월 10일</p>
+                            <p><strong>동인포털</strong></p>
+                            <p>대표이사 ○○○ (인)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>설정</h2>
+                <button class="close-btn" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>테마 설정</label>
+                    <select id="themeSelect" onchange="applyTheme(this.value)">
+                        <option value="light">밝은 테마 (기본)</option>
+                        <option value="dark">어두운 테마</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logoutOverlay" class="logout-overlay"></div>
+
+    <script src="../assets/js/titlebar.js"></script>
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/connection.js"></script>
+    <script src="js/docs.js"></script>
+</body>
+
+</html>

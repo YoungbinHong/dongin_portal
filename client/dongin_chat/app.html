@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DONGIN CHAT</title>
+    <link rel="icon" href="../assets/images/logo.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/titlebar.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <link rel="stylesheet" href="css/chat.css">
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-main">DONGIN</div>
+            <div class="logo-sub">CHAT</div>
+        </div>
+
+        <div class="search-area">
+            <input type="text" id="searchInput" placeholder="채팅방 검색...">
+        </div>
+
+        <div class="room-list" id="roomList">
+            <div class="room-item active" data-id="1">
+                <div class="room-avatar">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="room-info">
+                    <div class="room-name">전체 공지</div>
+                    <div class="room-last">환영합니다!</div>
+                </div>
+                <div class="room-badge">1</div>
+            </div>
+            <div class="room-item" data-id="2">
+                <div class="room-avatar">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                </div>
+                <div class="room-info">
+                    <div class="room-name">개발팀</div>
+                    <div class="room-last">회의 시간 확정되었습니다</div>
+                </div>
+            </div>
+            <div class="room-item" data-id="3">
+                <div class="room-avatar">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                </div>
+                <div class="room-info">
+                    <div class="room-name">디자인팀</div>
+                    <div class="room-last">새로운 디자인 시안 공유드립니다</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="footer-icon" onclick="goHome()" title="메뉴로 돌아가기">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
+            <div class="footer-icon" onclick="openSettings()" title="설정">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="chat-header" id="chatHeader">
+            <div class="chat-title">전체 공지</div>
+            <div class="chat-members">128명</div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message-date">2024년 2월 10일</div>
+            <div class="message received">
+                <div class="message-avatar">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="message-content">
+                    <div class="message-sender">관리자</div>
+                    <div class="message-text">DONGIN CHAT에 오신 것을 환영합니다!</div>
+                    <div class="message-time">오전 9:00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <button class="input-btn" title="파일 첨부">
+                <svg viewBox="0 0 24 24">
+                    <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                </svg>
+            </button>
+            <textarea id="messageInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+            <button id="sendBtn" class="send-btn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>설정</h2>
+                <button class="close-btn" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>테마 설정</label>
+                    <select id="themeSelect" onchange="applyTheme(this.value)">
+                        <option value="light">밝은 테마 (기본)</option>
+                        <option value="dark">어두운 테마</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logoutOverlay" class="logout-overlay"></div>
+
+    <script src="../assets/js/titlebar.js"></script>
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/connection.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+
+</html>

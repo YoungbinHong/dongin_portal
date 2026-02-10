@@ -12,6 +12,7 @@ body {
     height: 100vh;
     overflow: hidden;
     transition: background 0.3s ease, color 0.3s ease;
+    padding-top: 32px;
 }
 
 .sidebar {
