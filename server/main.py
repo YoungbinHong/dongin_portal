@@ -42,6 +42,36 @@ ai_lock = asyncio.Lock()
 
 otp_store = {}
 verified_emails = {}
+_last_online_count = None
+
+async def monitor_online_users():
+    """백그라운드에서 접속자 수 변경 감시"""
+    global _last_online_count
+
+    while True:
+        try:
+            await asyncio.sleep(10)
+
+            db = next(get_db())
+            try:
+                threshold = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) - datetime.timedelta(seconds=60)
+
+                online_users = db.query(User).filter(
+                    User.last_heartbeat.isnot(None),
+                    User.last_heartbeat >= threshold,
+                    User.is_active == True
+                ).all()
+
+                count = len(online_users)
+
+                if _last_online_count is not None and _last_online_count != count:
+                    logger.info(f"[접속자 변경] {_last_online_count}명 → {count}명")
+
+                _last_online_count = count
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"[접속자 감시 오류] {str(e)}")
 
 def init_test_accounts(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
@@ -127,8 +157,13 @@ async def lifespan(app: FastAPI):
         logger.info("="*50)
     finally:
         db.close()
+
+    monitor_task = asyncio.create_task(monitor_online_users())
+    logger.info("접속자 감시 백그라운드 태스크 시작")
+
     yield
 
+    monitor_task.cancel()
     logger.info("="*50)
     logger.info("Dongin Portal 서버 종료")
     logger.info("="*50)
@@ -903,6 +938,33 @@ async def ai_status(current_user: User = Depends(get_current_user)):
     result = await ai_engine.check_status()
     logger.info(f"[AI 상태] 사용자: {current_user.username} | ollama: {result['ollama']} | 모델: {result['model_loaded']}")
     return result
+
+@app.get("/api/admin/online-users")
+async def get_online_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
+):
+    threshold = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) - datetime.timedelta(seconds=60)
+
+    online_users = db.query(User).filter(
+        User.last_heartbeat.isnot(None),
+        User.last_heartbeat >= threshold,
+        User.is_active == True
+    ).all()
+
+    return {
+        "count": len(online_users),
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "role": u.role,
+                "last_heartbeat": u.last_heartbeat.isoformat() if u.last_heartbeat else None
+            }
+            for u in online_users
+        ]
+    }
 
 @app.get("/api/admin/users/pending", response_model=List[UserResponse])
 async def get_pending_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
