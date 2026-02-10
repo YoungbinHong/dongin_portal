@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +11,7 @@ import uvicorn
 import os
 import time
 import datetime
+import asyncio
 from logger import logger, get_user_logger, get_access_logger, get_event_logger
 
 from database import engine, get_db, Base
@@ -18,14 +19,20 @@ from models import User, Post, Comment
 from schemas import (
     UserCreate, UserUpdate, UserResponse,
     Token, PasswordChange, EventLog,
-    PostCreate, PostResponse, CommentCreate, CommentResponse
+    PostCreate, PostResponse, CommentCreate, CommentResponse,
+    AiChatRequest,
 )
+import ai_engine
 from auth import (
     get_password_hash, verify_password, create_access_token,
     get_current_user, get_current_active_admin
 )
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+ai_queue = asyncio.Queue()
+ai_processing = False
+ai_lock = asyncio.Lock()
 
 def init_test_accounts(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
@@ -134,7 +141,7 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     # heartbeat, health 체크는 로깅 제외
-    skip_paths = {"/api/heartbeat", "/health"}
+    skip_paths = {"/api/heartbeat", "/health", "/api/ai/chat"}
     should_log = request.url.path not in skip_paths
 
     start_time = time.time()
@@ -190,15 +197,15 @@ def _version_geq(client_ver, server_ver):
 async def update_check(version: str = "0.0.0"):
     server_version, path_val = _parse_latest_yml()
     if not server_version or not path_val:
-        logger.warning(f"업데이트 확인 | 클라이언트 버전: {version} | 서버에 latest.yml 없음")
+        logger.warning(f"[업데이트 확인] 클라이언트 버전: {version} | 서버에 latest.yml 없음")
         return {"updateAvailable": False, "version": version}
     update_available = not _version_geq(version, server_version)
     out = {"updateAvailable": update_available, "version": server_version}
     if update_available:
         out["downloadUrl"] = "/updates/" + path_val
-        logger.info(f"업데이트 확인 | 클라이언트 버전: {version} | 서버 버전: {server_version} | 업데이트 필요")
+        logger.info(f"[업데이트 확인] 클라이언트 버전: {version} | 서버 버전: {server_version} | 업데이트 필요")
     else:
-        logger.info(f"업데이트 확인 | 클라이언트 버전: {version} | 서버 버전: {server_version} | 최신 버전")
+        logger.info(f"[업데이트 확인] 클라이언트 버전: {version} | 서버 버전: {server_version} | 최신 버전")
     return out
 
 @app.get("/updates/latest.yml")
@@ -223,15 +230,15 @@ async def health(db: Session = Depends(get_db)):
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
-        logger.warning(f"로그인 실패 | 사용자명: {form_data.username} | 이유: 잘못된 인증 정보")
+        logger.warning(f"[로그인 실패] 사용자명: {form_data.username} | 이유: 잘못된 인증 정보")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="아이디 또는 비밀번호 오류")
     if not user.is_active:
-        logger.warning(f"로그인 실패 | 사용자명: {user.username} | 이유: 비활성화된 계정")
+        logger.warning(f"[로그인 실패] 사용자명: {user.username} | 이유: 비활성화된 계정")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성화된 계정")
     access_token = create_access_token(data={"sub": user.username, "role": user.role})
-    logger.info(f"로그인 성공 | 사용자: {user.username} | 역할: {user.role}")
+    logger.info(f"[로그인 성공] 사용자: {user.username} | 역할: {user.role}")
     user_logger = get_user_logger(user.username)
-    user_logger.info(f"로그인 성공 | 역할: {user.role}")
+    user_logger.info(f"[로그인 성공] 역할: {user.role}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/users/me", response_model=UserResponse)
@@ -245,13 +252,13 @@ async def change_my_password(
     db: Session = Depends(get_db)
 ):
     if not verify_password(password_data.current_password, current_user.hashed_password):
-        logger.warning(f"비밀번호 변경 실패 | 사용자: {current_user.username} | 이유: 현재 비밀번호 불일치")
+        logger.warning(f"[비밀번호 변경 실패] 사용자: {current_user.username} | 이유: 현재 비밀번호 불일치")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="현재 비밀번호 오류")
     current_user.hashed_password = get_password_hash(password_data.new_password)
     db.commit()
-    logger.info(f"비밀번호 변경 완료 | 사용자: {current_user.username}")
+    logger.info(f"[비밀번호 변경 완료] 사용자: {current_user.username}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info("비밀번호 변경 완료")
+    user_logger.info("[비밀번호 변경 완료]")
     return {"message": "비밀번호 변경 완료"}
 
 @app.get("/api/users", response_model=List[UserResponse])
@@ -262,7 +269,7 @@ async def get_users(
     db: Session = Depends(get_db)
 ):
     users = db.query(User).offset(skip).limit(limit).all()
-    logger.info(f"사용자 목록 조회 | 관리자: {current_user.username} | 조회된 사용자 수: {len(users)}")
+    logger.info(f"[사용자 목록 조회] 관리자: {current_user.username} | 조회된 사용자 수: {len(users)}")
     return users
 
 @app.get("/api/users/{user_id}", response_model=UserResponse)
@@ -273,9 +280,9 @@ async def get_user(
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        logger.warning(f"사용자 조회 실패 | 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
+        logger.warning(f"[사용자 조회 실패] 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자 없음")
-    logger.info(f"사용자 조회 | 관리자: {current_user.username} | 조회된 사용자: {user.username}")
+    logger.info(f"[사용자 조회] 관리자: {current_user.username} | 조회된 사용자: {user.username}")
     return user
 
 @app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -285,7 +292,7 @@ async def create_user(
     db: Session = Depends(get_db)
 ):
     if db.query(User).filter(User.username == user_data.username).first():
-        logger.warning(f"사용자 생성 실패 | 관리자: {current_user.username} | 이유: 중복된 사용자명 ({user_data.username})")
+        logger.warning(f"[사용자 생성 실패] 관리자: {current_user.username} | 이유: 중복된 사용자명 ({user_data.username})")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="이미 존재하는 사용자명")
     user = User(
         username=user_data.username,
@@ -297,9 +304,9 @@ async def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    logger.info(f"사용자 생성 완료 | 관리자: {current_user.username} | 신규 사용자: {user.username} | 역할: {user.role}")
+    logger.info(f"[사용자 생성 완료] 관리자: {current_user.username} | 신규 사용자: {user.username} | 역할: {user.role}")
     admin_logger = get_user_logger(current_user.username)
-    admin_logger.info(f"사용자 생성 | 신규 사용자: {user.username} | 역할: {user.role}")
+    admin_logger.info(f"[사용자 생성] 신규 사용자: {user.username} | 역할: {user.role}")
     return user
 
 @app.put("/api/users/{user_id}", response_model=UserResponse)
@@ -311,7 +318,7 @@ async def update_user(
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        logger.warning(f"사용자 수정 실패 | 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
+        logger.warning(f"[사용자 수정 실패] 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자 없음")
     update_data = user_data.model_dump(exclude_unset=True)
     updated_fields = list(update_data.keys())
@@ -319,9 +326,9 @@ async def update_user(
         setattr(user, key, value)
     db.commit()
     db.refresh(user)
-    logger.info(f"사용자 정보 수정 완료 | 관리자: {current_user.username} | 대상: {user.username} | 수정 항목: {', '.join(updated_fields)}")
+    logger.info(f"[사용자 정보 수정 완료] 관리자: {current_user.username} | 대상: {user.username} | 수정 항목: {', '.join(updated_fields)}")
     admin_logger = get_user_logger(current_user.username)
-    admin_logger.info(f"사용자 정보 수정 | 대상: {user.username} | 수정 항목: {', '.join(updated_fields)}")
+    admin_logger.info(f"[사용자 정보 수정] 대상: {user.username} | 수정 항목: {', '.join(updated_fields)}")
     return user
 
 @app.put("/api/users/{user_id}/password")
@@ -333,13 +340,13 @@ async def reset_user_password(
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        logger.warning(f"비밀번호 초기화 실패 | 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
+        logger.warning(f"[비밀번호 초기화 실패] 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자 없음")
     user.hashed_password = get_password_hash(new_password)
     db.commit()
-    logger.info(f"비밀번호 초기화 완료 | 관리자: {current_user.username} | 대상 사용자: {user.username}")
+    logger.info(f"[비밀번호 초기화 완료] 관리자: {current_user.username} | 대상 사용자: {user.username}")
     admin_logger = get_user_logger(current_user.username)
-    admin_logger.info(f"비밀번호 초기화 | 대상 사용자: {user.username}")
+    admin_logger.info(f"[비밀번호 초기화] 대상 사용자: {user.username}")
     return {"message": "비밀번호 초기화 완료"}
 
 @app.delete("/api/users/{user_id}")
@@ -350,17 +357,17 @@ async def delete_user(
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        logger.warning(f"사용자 삭제 실패 | 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
+        logger.warning(f"[사용자 삭제 실패] 관리자: {current_user.username} | 이유: 사용자 없음 (ID: {user_id})")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자 없음")
     if user.id == current_user.id:
-        logger.warning(f"사용자 삭제 실패 | 관리자: {current_user.username} | 이유: 자기 자신 삭제 시도")
+        logger.warning(f"[사용자 삭제 실패] 관리자: {current_user.username} | 이유: 자기 자신 삭제 시도")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="자기 자신 삭제 불가")
     username = user.username
     db.delete(user)
     db.commit()
-    logger.info(f"사용자 삭제 완료 | 관리자: {current_user.username} | 삭제된 사용자: {username}")
+    logger.info(f"[사용자 삭제 완료] 관리자: {current_user.username} | 삭제된 사용자: {username}")
     admin_logger = get_user_logger(current_user.username)
-    admin_logger.info(f"사용자 삭제 | 삭제된 사용자: {username}")
+    admin_logger.info(f"[사용자 삭제] 삭제된 사용자: {username}")
     return {"message": "삭제 완료"}
 
 @app.post("/api/heartbeat")
@@ -375,9 +382,9 @@ async def heartbeat(
 
 @app.post("/api/auth/logout")
 async def logout(current_user: User = Depends(get_current_user)):
-    logger.info(f"로그아웃 | 사용자: {current_user.username}")
+    logger.info(f"[로그아웃] 사용자: {current_user.username}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info("로그아웃")
+    user_logger.info("[로그아웃]")
     return {"message": "로그아웃"}
 
 @app.post("/api/event")
@@ -416,19 +423,19 @@ def _post_to_dict(post: Post) -> dict:
 @app.get("/api/posts")
 async def get_posts(db: Session = Depends(get_db)):
     posts = db.query(Post).order_by(Post.created_at.desc()).all()
-    logger.info(f"게시글 목록 조회 | 전체 게시글 수: {len(posts)}")
+    logger.info(f"[게시글 목록 조회] 전체 게시글 수: {len(posts)}")
     return [_post_to_dict(p) for p in posts]
 
 @app.get("/api/posts/{post_id}")
 async def get_post(post_id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        logger.warning(f"게시글 조회 실패 | 이유: 게시글 없음 (ID: {post_id})")
+        logger.warning(f"[게시글 조회 실패] 이유: 게시글 없음 (ID: {post_id})")
         raise HTTPException(status_code=404, detail="게시글 없음")
     post.views += 1
     db.commit()
     db.refresh(post)
-    logger.info(f"게시글 조회 | ID: {post_id} | 제목: {post.title} | 조회수: {post.views}")
+    logger.info(f"[게시글 조회] ID: {post_id} | 제목: {post.title} | 조회수: {post.views}")
     return _post_to_dict(post)
 
 @app.post("/api/posts", status_code=status.HTTP_201_CREATED)
@@ -446,9 +453,9 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
-    logger.info(f"게시글 작성 완료 | 작성자: {current_user.username} | 카테고리: {post.category} | 제목: {post.title}")
+    logger.info(f"[게시글 작성 완료] 작성자: {current_user.username} | 카테고리: {post.category} | 제목: {post.title}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info(f"게시글 작성 | 카테고리: {post.category} | 제목: {post.title}")
+    user_logger.info(f"[게시글 작성] 카테고리: {post.category} | 제목: {post.title}")
     return _post_to_dict(post)
 
 @app.delete("/api/posts/{post_id}")
@@ -459,17 +466,17 @@ async def delete_post(
 ):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        logger.warning(f"게시글 삭제 실패 | 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
+        logger.warning(f"[게시글 삭제 실패] 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
         raise HTTPException(status_code=404, detail="게시글 없음")
     if post.author != current_user.username and current_user.role != "admin":
-        logger.warning(f"게시글 삭제 실패 | 사용자: {current_user.username} | 이유: 권한 없음 (게시글 ID: {post_id})")
+        logger.warning(f"[게시글 삭제 실패] 사용자: {current_user.username} | 이유: 권한 없음 (게시글 ID: {post_id})")
         raise HTTPException(status_code=403, detail="삭제 권한 없음")
     post_title = post.title
     db.delete(post)
     db.commit()
-    logger.info(f"게시글 삭제 완료 | 사용자: {current_user.username} | 게시글: {post_title}")
+    logger.info(f"[게시글 삭제 완료] 사용자: {current_user.username} | 게시글: {post_title}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info(f"게시글 삭제 | 제목: {post_title}")
+    user_logger.info(f"[게시글 삭제] 제목: {post_title}")
     return {"message": "삭제 완료"}
 
 @app.post("/api/posts/{post_id}/like")
@@ -480,13 +487,13 @@ async def toggle_like(
 ):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        logger.warning(f"좋아요 실패 | 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
+        logger.warning(f"[좋아요 실패] 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
         raise HTTPException(status_code=404, detail="게시글 없음")
     post.likes += 1
     db.commit()
-    logger.info(f"좋아요 | 사용자: {current_user.username} | 게시글: {post.title} | 총 좋아요: {post.likes}")
+    logger.info(f"[좋아요] 사용자: {current_user.username} | 게시글: {post.title} | 총 좋아요: {post.likes}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info(f"좋아요 | 게시글: {post.title}")
+    user_logger.info(f"[좋아요] 게시글: {post.title}")
     return {"likes": post.likes}
 
 @app.post("/api/posts/{post_id}/comments", status_code=status.HTTP_201_CREATED)
@@ -498,7 +505,7 @@ async def create_comment(
 ):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        logger.warning(f"댓글 작성 실패 | 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
+        logger.warning(f"[댓글 작성 실패] 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
         raise HTTPException(status_code=404, detail="게시글 없음")
     comment = Comment(
         post_id=post_id,
@@ -508,9 +515,9 @@ async def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
-    logger.info(f"댓글 작성 완료 | 작성자: {current_user.username} | 게시글: {post.title} | 댓글 내용: {comment_data.text[:50]}{'...' if len(comment_data.text) > 50 else ''}")
+    logger.info(f"[댓글 작성 완료] 작성자: {current_user.username} | 게시글: {post.title} | 댓글 내용: {comment_data.text[:50]}{'...' if len(comment_data.text) > 50 else ''}")
     user_logger = get_user_logger(current_user.username)
-    user_logger.info(f"댓글 작성 | 게시글: {post.title}")
+    user_logger.info(f"[댓글 작성] 게시글: {post.title}")
     return {
         "id": comment.id,
         "post_id": comment.post_id,
@@ -518,6 +525,56 @@ async def create_comment(
         "text": comment.text,
         "date": comment.created_at.strftime("%Y-%m-%d") if comment.created_at else ""
     }
+
+@app.post("/api/ai/chat")
+async def ai_chat(req: AiChatRequest, current_user: User = Depends(get_current_user)):
+    import json as _json
+    global ai_processing
+
+    logger.info(f"[AI 채팅] 사용자: {current_user.username} | 메시지: {req.message[:50]}{'...' if len(req.message) > 50 else ''}")
+    user_logger = get_user_logger(current_user.username)
+    user_logger.info(f"[AI 채팅] 메시지: {req.message[:50]}{'...' if len(req.message) > 50 else ''}")
+
+    my_event = asyncio.Event()
+    await ai_queue.put(my_event)
+
+    async def event_stream():
+        global ai_processing
+        try:
+            while True:
+                queue_list = list(ai_queue._queue)
+                position = queue_list.index(my_event) if my_event in queue_list else -1
+
+                if position == 0:
+                    async with ai_lock:
+                        if not ai_processing:
+                            ai_processing = True
+                            await ai_queue.get()
+                            break
+                    yield f"data: {_json.dumps({'type': 'queue', 'position': 1}, ensure_ascii=False)}\n\n"
+                elif position > 0:
+                    yield f"data: {_json.dumps({'type': 'queue', 'position': position}, ensure_ascii=False)}\n\n"
+
+                await asyncio.sleep(0.5)
+
+            yield f"data: {_json.dumps({'type': 'processing'}, ensure_ascii=False)}\n\n"
+
+            history = [m.model_dump() for m in req.history] if req.history else None
+            async for chunk in ai_engine.chat_stream(req.message, history):
+                yield f"data: {_json.dumps(chunk, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"[AI 채팅 오류] 사용자: {current_user.username} | 오류: {str(e)}")
+            yield f"data: {_json.dumps({'content': f'오류가 발생했습니다: {str(e)}', 'done': True}, ensure_ascii=False)}\n\n"
+        finally:
+            ai_processing = False
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.get("/api/ai/status")
+async def ai_status(current_user: User = Depends(get_current_user)):
+    result = await ai_engine.check_status()
+    logger.info(f"[AI 상태] 사용자: {current_user.username} | ollama: {result['ollama']} | 모델: {result['model_loaded']}")
+    return result
 
 if __name__ == "__main__":
     uvicorn.run(

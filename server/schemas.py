@@ -2,6 +2,15 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
+
+class AiChatMessage(BaseModel):
+    role: str
+    content: str
+
+class AiChatRequest(BaseModel):
+    message: str = Field(..., min_length=1)
+    history: list[AiChatMessage] | None = None
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     name: str = Field(..., min_length=1, max_length=100)
