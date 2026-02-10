@@ -1,8 +1,11 @@
+const API_BASE = 'http://192.168.0.254:8000';
+
 let chatIdCounter = 1;
 let currentChatId = '1';
 let chats = {
     '1': { title: '새 대화', messages: [] }
 };
+let currentUser = null;
 
 function createNewChat() {
     chatIdCounter++;
@@ -13,6 +16,7 @@ function createNewChat() {
     clearMessages();
     document.getElementById('welcomeScreen').classList.remove('hidden');
     document.getElementById('messageInput').focus();
+    saveChats();
 }
 
 function selectChat(chatId) {
@@ -31,6 +35,7 @@ function deleteChat(event, chatId) {
     }
     renderChatHistory();
     renderMessages();
+    saveChats();
 }
 
 function renderChatHistory() {
@@ -101,6 +106,7 @@ function addMessage(role, content) {
         chats[currentChatId].title = content.substring(0, 30) + (content.length > 30 ? '...' : '');
         renderChatHistory();
     }
+    saveChats();
 }
 
 function showTypingIndicator() {
@@ -131,10 +137,98 @@ function scrollToBottom() {
     container.scrollTop = container.scrollHeight;
 }
 
-function sendMessage() {
+let isStreaming = false;
+let abortController = null;
+
+function buildHistory() {
+    const msgs = chats[currentChatId]?.messages || [];
+    return msgs.map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content }));
+}
+
+function createStreamingMessageEl() {
+    const container = document.getElementById('messagesContainer');
+    const html = `
+        <div class="message ai" id="streamingMessage">
+            <div class="message-avatar">
+                <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+            </div>
+            <div class="message-content" id="streamingContent">
+                <div class="typing-indicator"><span></span><span></span><span></span></div>
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+function showQueueStatus(position) {
+    const streamEl = document.getElementById('streamingContent');
+    if (!streamEl) return;
+    streamEl.innerHTML = `
+        <div class="queue-indicator">
+            <div class="queue-spinner"></div>
+            <div class="queue-text">대기열 <span class="queue-position">${position}</span>번째</div>
+            <div class="queue-sub">다른 사용자의 요청을 처리중입니다. 잠시만 기다려주세요.</div>
+        </div>
+    `;
+    scrollToBottom();
+}
+
+function showProcessingStatus() {
+    const streamEl = document.getElementById('streamingContent');
+    if (!streamEl) return;
+    streamEl.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+    scrollToBottom();
+}
+
+function toggleSendButton(isStop) {
+    const btn = document.getElementById('sendBtn');
+    const input = document.getElementById('messageInput');
+
+    if (isStop) {
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="20" height="20">
+                <path fill="currentColor" d="M6 6h12v12H6z"/>
+            </svg>
+        `;
+        btn.classList.add('stop-btn');
+        btn.onclick = stopStreaming;
+        input.disabled = true;
+    } else {
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="20" height="20">
+                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        `;
+        btn.classList.remove('stop-btn');
+        btn.onclick = sendMessage;
+        input.disabled = false;
+    }
+}
+
+function stopStreaming() {
+    if (abortController) {
+        abortController.abort();
+        abortController = null;
+    }
+    isStreaming = false;
+    toggleSendButton(false);
+
+    const streamEl = document.getElementById('streamingContent');
+    if (streamEl && !streamEl.textContent.trim()) {
+        const streamMsg = document.getElementById('streamingMessage');
+        if (streamMsg) streamMsg.remove();
+    }
+}
+
+async function sendMessage() {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
-    if (!content) return;
+    if (!content || isStreaming) {
+        console.log('[AI] blocked:', { content: !!content, isStreaming });
+        return;
+    }
+    console.log('[AI] sendMessage 시작');
 
     document.getElementById('welcomeScreen').classList.add('hidden');
 
@@ -146,26 +240,99 @@ function sendMessage() {
     input.value = '';
     input.style.height = 'auto';
 
-    showTypingIndicator();
+    const history = buildHistory();
 
-    setTimeout(() => {
-        hideTypingIndicator();
-        const response = generateResponse(content);
-        addMessage('ai', response);
-        container.insertAdjacentHTML('beforeend', createMessageHTML('ai', response));
-        scrollToBottom();
-    }, 1000 + Math.random() * 1000);
-}
+    isStreaming = true;
+    toggleSendButton(true);
+    createStreamingMessageEl();
 
-function generateResponse(userMessage) {
-    const responses = [
-        '네, 말씀하신 내용을 확인했습니다. 더 자세한 정보가 필요하시면 말씀해 주세요.',
-        '좋은 질문이네요! 제가 도와드릴 수 있는 부분이 있다면 알려주세요.',
-        '알겠습니다. 요청하신 내용을 처리해 드리겠습니다.',
-        '흥미로운 주제네요. 어떤 부분에 대해 더 알고 싶으신가요?',
-        '네, 이해했습니다. 추가로 필요한 사항이 있으시면 말씀해 주세요.'
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+    let fullResponse = '';
+    const streamEl = document.getElementById('streamingContent');
+
+    try {
+        const token = localStorage.getItem('access_token');
+        console.log('[AI] fetch 시작, token:', token ? '있음' : '없음');
+
+        abortController = new AbortController();
+        const res = await fetch(`${API_BASE}/api/ai/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ message: content, history }),
+            signal: abortController.signal
+        });
+
+        console.log('[AI] 응답 상태:', res.status, res.headers.get('content-type'));
+        if (!res.ok) throw new Error(`API 요청 실패: ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            console.log('[AI] chunk:', JSON.stringify(chunk));
+            buffer += chunk;
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+
+                try {
+                    const data = JSON.parse(jsonStr);
+                    if (data.type === 'queue') {
+                        showQueueStatus(data.position);
+                        continue;
+                    }
+                    if (data.type === 'processing') {
+                        showProcessingStatus();
+                        continue;
+                    }
+                    if (data.content) {
+                        fullResponse += data.content;
+                        streamEl.innerHTML = escapeHtml(fullResponse);
+                        scrollToBottom();
+                    }
+                    if (data.done) break;
+                } catch {}
+            }
+        }
+    } catch (e) {
+        console.error('[AI Chat Error]', e);
+        if (e.name === 'AbortError') {
+            console.log('[AI] 사용자가 중단함');
+            if (!fullResponse) {
+                const streamMsg = document.getElementById('streamingMessage');
+                if (streamMsg) streamMsg.remove();
+            } else {
+                if (streamEl) {
+                    streamEl.innerHTML = escapeHtml(fullResponse) + '<br><em style="color: #999; font-size: 12px;">(중단됨)</em>';
+                }
+            }
+        } else if (!fullResponse) {
+            fullResponse = '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.';
+            if (streamEl) streamEl.innerHTML = escapeHtml(fullResponse);
+        }
+    }
+
+    const streamMsg = document.getElementById('streamingMessage');
+    if (streamMsg) streamMsg.removeAttribute('id');
+    if (streamEl) streamEl.removeAttribute('id');
+
+    if (fullResponse) {
+        addMessage('ai', fullResponse);
+    }
+    isStreaming = false;
+    abortController = null;
+    toggleSendButton(false);
 }
 
 function useSuggestion(text) {
@@ -186,7 +353,61 @@ messageInput.addEventListener('input', function() {
     this.style.height = Math.min(this.scrollHeight, 150) + 'px';
 });
 
+async function loadUser() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '../login.html';
+            return;
+        }
+
+        const res = await fetch(`${API_BASE}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+            window.location.href = '../login.html';
+            return;
+        }
+
+        currentUser = await res.json();
+        loadChats();
+        renderChatHistory();
+        renderMessages();
+        messageInput.focus();
+    } catch (e) {
+        console.error('사용자 정보 로드 실패:', e);
+        window.location.href = '../login.html';
+    }
+}
+
+function saveChats() {
+    if (!currentUser) return;
+    const storageKey = `ai_chats_${currentUser.username}`;
+    localStorage.setItem(storageKey, JSON.stringify({
+        chatIdCounter,
+        currentChatId,
+        chats
+    }));
+}
+
+function loadChats() {
+    if (!currentUser) return;
+    const storageKey = `ai_chats_${currentUser.username}`;
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            chatIdCounter = data.chatIdCounter || 1;
+            currentChatId = data.currentChatId || '1';
+            chats = data.chats || { '1': { title: '새 대화', messages: [] } };
+        } catch (e) {
+            console.error('대화 기록 로드 실패:', e);
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    renderChatHistory();
-    messageInput.focus();
+    loadUser();
 });

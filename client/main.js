@@ -27,6 +27,7 @@ function createWindow() {
         minWidth: 1280,
         minHeight: 800,
         icon: path.join(__dirname, 'assets', 'images', 'logo.png'),
+        title: `DONGIN PORTAL v${app.getVersion()}`,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,

@@ -55,6 +55,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1),
                 box-shadow 0.4s cubic-bezier(0.23, 1, 0.32, 1),
@@ -106,7 +107,7 @@ body {
 }
 
 .card-title {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
     color: #2d3436;
     margin-bottom: 8px;
@@ -115,7 +116,7 @@ body {
 }
 
 .card-subtitle {
-    font-size: 12px;
+    font-size: 14px;
     color: #a29bfe;
     font-weight: 600;
     margin-bottom: 12px;
@@ -126,7 +127,6 @@ body {
     color: #636e72;
     text-align: center;
     line-height: 1.6;
-    flex: 1;
 }
 
 .card-badge {

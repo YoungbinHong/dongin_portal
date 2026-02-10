@@ -1,3 +1,12 @@
+async function setAppTitle() {
+    try {
+        const version = await window.api.getAppVersion();
+        document.title = `DONGIN PORTAL v${version}`;
+    } catch (error) {
+        console.error('Failed to set app title:', error);
+    }
+}
+
 function loadSavedTheme() {
     const savedTheme = localStorage.getItem('donginTheme') || 'light';
     applyTheme(savedTheme);
@@ -13,3 +22,5 @@ function applyTheme(theme) {
     }
     localStorage.setItem('donginTheme', theme);
 }
+
+setAppTitle();

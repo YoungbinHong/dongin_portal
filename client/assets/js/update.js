@@ -5,6 +5,17 @@ const statusText = document.getElementById('statusText');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
+async function setAppTitle() {
+    try {
+        const version = await window.api.getAppVersion();
+        document.title = `DONGIN PORTAL v${version}`;
+    } catch (error) {
+        console.error('Failed to set app title:', error);
+    }
+}
+
+setAppTitle();
+
 function showTimeoutModal() {
     document.getElementById('timeoutModal').classList.add('show');
 }

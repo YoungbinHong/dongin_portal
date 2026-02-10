@@ -268,6 +268,14 @@
     transform: none;
 }
 
+.send-btn.stop-btn {
+    background: #ff7675;
+}
+
+.send-btn.stop-btn:hover {
+    background: #d63031;
+}
+
 .send-btn svg {
     fill: white;
 }
@@ -277,4 +285,42 @@
     font-size: 11px;
     color: var(--text-secondary);
     margin-top: 8px;
+}
+
+.queue-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 8px;
+}
+
+.queue-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: queue-spin 0.8s linear infinite;
+}
+
+@keyframes queue-spin {
+    to { transform: rotate(360deg); }
+}
+
+.queue-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.queue-position {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.queue-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
