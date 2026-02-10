@@ -28,8 +28,10 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    email: Optional[str] = None
     role: str
     is_active: bool
+    approval_status: str
     created_at: Optional[datetime]
 
     class Config:
@@ -85,6 +87,9 @@ class PostResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class CheckEmailRequest(BaseModel):
+    email: str = Field(..., min_length=1)
 
 class SendOtpRequest(BaseModel):
     email: str = Field(..., min_length=1)

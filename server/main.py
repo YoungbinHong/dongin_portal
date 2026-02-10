@@ -26,7 +26,7 @@ from schemas import (
     Token, PasswordChange, EventLog,
     PostCreate, PostResponse, CommentCreate, CommentResponse,
     AiChatRequest,
-    SendOtpRequest, VerifyOtpRequest, SignupRequest,
+    CheckEmailRequest, SendOtpRequest, VerifyOtpRequest, SignupRequest,
 )
 import ai_engine
 from auth import (
@@ -293,12 +293,76 @@ async def send_otp_email(email: str, otp: str):
             start_tls=True,
         )
 
+async def send_approval_email(email: str, name: str):
+    dev_mode = os.getenv("DEV_MODE", "true").lower() == "true"
+
+    if dev_mode:
+        logger.info(f"[개발 모드] 승인 완료 이메일 발송 → 이메일: {email}")
+        print(f"\n{'='*50}")
+        print(f"[가입 승인 완료]")
+        print(f"이메일: {email}")
+        print(f"이름: {name}")
+        print(f"{'='*50}\n")
+        return
+
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv("SMTP_FROM", smtp_user)
+
+    if not smtp_host or not smtp_user or not smtp_password:
+        raise HTTPException(status_code=500, detail="SMTP 설정이 필요합니다")
+
+    msg = MIMEMultipart()
+    msg["From"] = smtp_from
+    msg["To"] = email
+    msg["Subject"] = "[DONGIN PORTAL] 회원가입 승인 완료"
+
+    body = f"""안녕하세요, {name}님.
+
+DONGIN PORTAL 회원가입이 승인되었습니다.
+이제 모든 서비스를 이용하실 수 있습니다.
+
+감사합니다."""
+
+    msg.attach(MIMEText(body, "plain"))
+
+    if smtp_port == 465:
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            use_tls=True,
+        )
+    else:
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_password,
+            start_tls=True,
+        )
+
+@app.post("/api/auth/check-email")
+async def check_email(request: CheckEmailRequest, db: Session = Depends(get_db)):
+    try:
+        validate_email(request.email, check_deliverability=True)
+    except EmailNotValidError as e:
+        raise HTTPException(status_code=400, detail=f"유효하지 않은 이메일: {str(e)}")
+
+    existing_user = db.query(User).filter(User.email == request.email).first()
+    return {"exists": existing_user is not None}
+
 @app.post("/api/auth/send-otp")
 async def send_otp(request: SendOtpRequest):
     try:
-        validate_email(request.email)
-    except EmailNotValidError:
-        raise HTTPException(status_code=400, detail="올바른 이메일 형식이 아닙니다")
+        validate_email(request.email, check_deliverability=True)
+    except EmailNotValidError as e:
+        raise HTTPException(status_code=400, detail=f"유효하지 않은 이메일: {str(e)}")
 
     otp = str(random.randint(100000, 999999))
 
@@ -344,9 +408,9 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="이메일 인증이 필요합니다")
 
     try:
-        validate_email(request.email)
-    except EmailNotValidError:
-        raise HTTPException(status_code=400, detail="올바른 이메일 형식이 아닙니다")
+        validate_email(request.email, check_deliverability=True)
+    except EmailNotValidError as e:
+        raise HTTPException(status_code=400, detail=f"유효하지 않은 이메일: {str(e)}")
 
     if db.query(User).filter(User.email == request.email).first():
         raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다")
@@ -363,7 +427,8 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
         name=request.name,
         position="일반",
         role="user",
-        is_active=True
+        is_active=False,
+        approval_status="pending"
     )
 
     db.add(user)
@@ -372,8 +437,8 @@ async def signup(request: SignupRequest, db: Session = Depends(get_db)):
 
     del verified_emails[request.email]
 
-    logger.info(f"[회원가입 완료] 이메일: {request.email} | 사용자명: {username}")
-    return {"success": True}
+    logger.info(f"[회원가입 요청] 이메일: {request.email} | 사용자명: {username} | 상태: 승인 대기")
+    return {"success": True, "message": "회원가입 요청이 완료되었습니다. 관리자 승인 후 이용 가능합니다."}
 
 
 @app.post("/api/auth/login", response_model=Token)
@@ -383,6 +448,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         logger.warning(f"[로그인 실패] 사용자명: {form_data.username} | 이유: 잘못된 인증 정보")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="아이디 또는 비밀번호 오류")
     if not user.is_active:
+        if user.approval_status == "pending":
+            logger.warning(f"[로그인 실패] 사용자명: {user.username} | 이유: 승인 대기 중")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 승인 대기 중입니다")
         logger.warning(f"[로그인 실패] 사용자명: {user.username} | 이유: 비활성화된 계정")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성화된 계정")
     access_token = create_access_token(data={"sub": user.username, "role": user.role})
@@ -725,6 +793,48 @@ async def ai_status(current_user: User = Depends(get_current_user)):
     result = await ai_engine.check_status()
     logger.info(f"[AI 상태] 사용자: {current_user.username} | ollama: {result['ollama']} | 모델: {result['model_loaded']}")
     return result
+
+@app.get("/api/admin/users/pending", response_model=List[UserResponse])
+async def get_pending_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
+    users = db.query(User).filter(User.approval_status == "pending").all()
+    logger.info(f"[관리자] 승인 대기 목록 조회: {current_user.username} | 대기 중: {len(users)}명")
+    return users
+
+@app.post("/api/admin/users/{user_id}/approve")
+async def approve_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+    if user.approval_status != "pending":
+        raise HTTPException(status_code=400, detail="승인 대기 상태가 아닙니다")
+
+    user.is_active = True
+    user.approval_status = "approved"
+    db.commit()
+
+    try:
+        await send_approval_email(user.email, user.name)
+    except Exception as e:
+        logger.error(f"[승인 이메일 발송 실패] 사용자: {user.username} | 오류: {str(e)}")
+
+    logger.info(f"[관리자] 회원가입 승인: {current_user.username} → {user.username}")
+    return {"success": True}
+
+@app.post("/api/admin/users/{user_id}/reject")
+async def reject_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+    if user.approval_status != "pending":
+        raise HTTPException(status_code=400, detail="승인 대기 상태가 아닙니다")
+
+    db.delete(user)
+    db.commit()
+
+    logger.info(f"[관리자] 회원가입 거절: {current_user.username} → {user.username}")
+    return {"success": True}
 
 if __name__ == "__main__":
     uvicorn.run(
