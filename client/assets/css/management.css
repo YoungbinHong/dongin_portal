@@ -328,6 +328,35 @@ body {
     background: rgba(255, 118, 117, 0.2);
 }
 
+.approve-btn {
+    background: rgba(0, 184, 148, 0.1);
+}
+
+.approve-btn svg {
+    fill: #00b894;
+}
+
+.approve-btn:hover {
+    background: rgba(0, 184, 148, 0.2);
+}
+
+.reject-btn {
+    background: rgba(255, 118, 117, 0.1);
+}
+
+.reject-btn svg {
+    fill: #ff7675;
+}
+
+.reject-btn:hover {
+    background: rgba(255, 118, 117, 0.2);
+}
+
+.pending-badge {
+    background: rgba(253, 203, 110, 0.15);
+    color: #fdcb6e;
+}
+
 .empty-state {
     text-align: center;
     padding: 40px 20px;

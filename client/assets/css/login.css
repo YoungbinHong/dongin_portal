@@ -674,3 +674,60 @@ body.dark-theme .signup-submit-btn {
 body.dark-theme .signup-submit-btn:hover {
     background: #6c5ce7;
 }
+
+.alert-modal {
+    display: none;
+    background: white;
+    border-radius: 20px;
+    width: 360px;
+    max-width: 90vw;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.alert-body {
+    padding: 36px 32px 28px;
+    text-align: center;
+}
+
+.alert-icon {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.alert-message {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #2d3436;
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+    word-break: keep-all;
+}
+
+.alert-ok-btn {
+    width: 100%;
+    padding: 14px;
+    background: #a29bfe;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.alert-ok-btn:hover {
+    background: #6c5ce7;
+    transform: translateY(-2px);
+}
+
+body.dark-theme .alert-modal {
+    background: #1e1e2e;
+}
+
+body.dark-theme .alert-message {
+    color: #ffffff;
+}

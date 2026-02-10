@@ -15,7 +15,20 @@ function closeModal() {
     document.getElementById('modalOverlay').style.display = 'none';
     document.getElementById('settingsContent').style.display = 'none';
     document.getElementById('signupContent').style.display = 'none';
+    document.getElementById('alertContent').style.display = 'none';
     resetSignupForm();
+}
+
+function showAlert(message) {
+    document.getElementById('alertMessage').textContent = message;
+    document.getElementById('settingsContent').style.display = 'none';
+    document.getElementById('signupContent').style.display = 'none';
+    document.getElementById('alertContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function closeAlertModal() {
+    closeModal();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -143,6 +156,23 @@ function validateEmail(email) {
     return re.test(email);
 }
 
+function checkEmailTypo(email) {
+    const domain = email.split('@')[1];
+    if (!domain) return null;
+
+    const common = {
+        'gmail.com': ['gmai.com', 'gmial.com', 'gamil.com', 'gmil.com'],
+        'naver.com': ['naber.com', 'nave.com', 'nver.com'],
+        'daum.net': ['duam.net', 'daun.net', 'damu.net'],
+        'kakao.com': ['kakoa.com', 'kaka.com']
+    };
+
+    for (const [correct, typos] of Object.entries(common)) {
+        if (typos.includes(domain)) return correct;
+    }
+    return null;
+}
+
 async function sendOTP() {
     const email = document.getElementById('signupEmail').value.trim();
     const emailError = document.getElementById('emailError');
@@ -155,6 +185,12 @@ async function sendOTP() {
 
     if (!validateEmail(email)) {
         emailError.textContent = '올바른 이메일 형식이 아닙니다.';
+        return;
+    }
+
+    const suggestion = checkEmailTypo(email);
+    if (suggestion) {
+        emailError.textContent = `${suggestion}을(를) 의미하셨나요?`;
         return;
     }
 
@@ -300,17 +336,17 @@ async function submitSignup() {
             body: JSON.stringify({ email, password, name })
         });
 
+        const data = await res.json();
+
         if (!res.ok) {
-            const data = await res.json();
             throw new Error(data.detail || '회원가입 실패');
         }
 
-        alert('회원가입이 완료되었습니다. 로그인해주세요.');
-        closeModal();
+        showAlert(data.message || '회원가입이 완료되었습니다. 로그인해주세요.');
         document.getElementById('email').value = email;
 
     } catch (e) {
-        alert(e.message);
+        showAlert(e.message);
         submitBtn.disabled = false;
         submitBtn.textContent = '제출하기';
     }

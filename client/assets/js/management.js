@@ -1,5 +1,6 @@
 const API_BASE = 'http://192.168.0.254:8000';
 let accounts = [];
+let pendingUsers = [];
 let deletingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,6 +30,7 @@ async function checkAuth() {
             return;
         }
         loadAccounts();
+        loadPendingUsers();
     } catch {
         localStorage.removeItem('access_token');
         window.location.href = 'login.html';
@@ -52,6 +54,93 @@ async function loadAccounts() {
         accounts = await res.json();
         renderAccounts();
     } catch {
+    }
+}
+
+async function loadPendingUsers() {
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/users/pending`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error();
+        pendingUsers = await res.json();
+        renderPendingUsers();
+    } catch {
+    }
+}
+
+function renderPendingUsers() {
+    const pendingList = document.getElementById('pendingList');
+    const pendingCount = document.getElementById('pendingCount');
+
+    pendingCount.textContent = pendingUsers.length;
+
+    if (pendingUsers.length === 0) {
+        pendingList.innerHTML = createEmptyState();
+        return;
+    }
+
+    pendingList.innerHTML = pendingUsers.map(user => `
+        <div class="account-item pending">
+            <div class="account-avatar">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            </div>
+            <div class="account-info">
+                <div class="account-name">${user.name} <span class="status-badge pending-badge">대기중</span></div>
+                <div class="account-email">${user.username}</div>
+            </div>
+            <div class="account-actions">
+                <button class="action-btn approve-btn" onclick="approveUser(${user.id})" title="승인">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                </button>
+                <button class="action-btn reject-btn" onclick="rejectUser(${user.id})" title="거절">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function approveUser(userId) {
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}/approve`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '승인 실패');
+        }
+        await loadPendingUsers();
+        await loadAccounts();
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+async function rejectUser(userId) {
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}/reject`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '거절 실패');
+        }
+        await loadPendingUsers();
+        await loadAccounts();
+    } catch (e) {
+        alert(e.message);
     }
 }
 
