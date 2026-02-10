@@ -28,6 +28,9 @@
                 <input type="password" id="password" placeholder="비밀번호">
                 <div id="errorBox" class="error-box">이메일 또는 비밀번호가 일치하지 않습니다.</div>
                 <button onclick="checkLogin()">계속하기</button>
+                <div class="signup-link">
+                    아직 회원이 아니신가요? <a href="#" onclick="openSignup(event)">회원가입</a>
+                </div>
             </div>
         </div>
     </div>
@@ -52,6 +55,40 @@
                         <option value="dark">어두운 테마</option>
                     </select>
                 </div>
+            </div>
+        </div>
+
+        <div id="signupContent" class="signup-modal">
+            <div class="signup-header">
+                <h2>회원가입</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="signup-body">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <div class="email-input-group">
+                        <input type="email" id="signupEmail" placeholder="example@domain.com">
+                        <button class="verify-btn" onclick="sendOTP()" id="verifyBtn">인증하기</button>
+                    </div>
+                    <div id="emailError" class="field-error"></div>
+                </div>
+                <div class="form-group" id="otpGroup" style="display:none;">
+                    <label>인증번호</label>
+                    <input type="text" id="otpCode" placeholder="6자리 인증번호" maxlength="6">
+                    <div id="otpError" class="field-error"></div>
+                    <div id="otpSuccess" class="field-success"></div>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="signupPassword" placeholder="8자 이상">
+                    <div id="passwordError" class="field-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" id="signupName" placeholder="이름">
+                    <div id="nameError" class="field-error"></div>
+                </div>
+                <button class="signup-submit-btn" onclick="submitSignup()">제출하기</button>
             </div>
         </div>
     </div>

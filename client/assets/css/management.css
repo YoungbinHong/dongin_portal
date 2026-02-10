@@ -10,6 +10,7 @@ body {
 .management-layout {
     display: flex;
     min-height: 100vh;
+    padding-top: 32px;
 }
 
 .sidebar {
@@ -22,7 +23,7 @@ body {
     flex-direction: column;
     position: fixed;
     left: 0;
-    top: 0;
+    top: 32px;
     bottom: 0;
     z-index: 100;
 }
