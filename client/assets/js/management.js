@@ -2,6 +2,8 @@ const API_BASE = 'http://192.168.0.254:8000';
 let accounts = [];
 let pendingUsers = [];
 let deletingId = null;
+let onlineUsersInterval = null;
+let onlineUsersData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
@@ -31,6 +33,8 @@ async function checkAuth() {
         }
         loadAccounts();
         loadPendingUsers();
+        loadOnlineUsers();
+        onlineUsersInterval = setInterval(loadOnlineUsers, 1000);
     } catch {
         localStorage.removeItem('access_token');
         window.location.href = 'login.html';
@@ -356,3 +360,62 @@ async function confirmLogout() {
         window.location.href = 'login.html';
     }, 800);
 }
+
+async function loadOnlineUsers() {
+    const token = getToken();
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/online-users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error();
+        onlineUsersData = await res.json();
+
+        const countEl = document.getElementById('onlineUserCount');
+        if (countEl) {
+            countEl.textContent = onlineUsersData.count;
+        }
+    } catch (e) {
+        console.error('접속자 수 로드 실패:', e);
+        const countEl = document.getElementById('onlineUserCount');
+        if (countEl) {
+            countEl.textContent = '-';
+        }
+    }
+}
+
+function showOnlineUsersModal() {
+    if (!onlineUsersData || !onlineUsersData.users) return;
+
+    const listEl = document.getElementById('onlineUsersList');
+    if (!listEl) return;
+
+    if (onlineUsersData.users.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#636e72;">현재 접속 중인 사용자가 없습니다.</div>';
+    } else {
+        listEl.innerHTML = onlineUsersData.users.map(user => {
+            const roleText = user.role === 'admin' ? '관리자' : '일반';
+            const lastTime = user.last_heartbeat ? new Date(user.last_heartbeat).toLocaleString('ko-KR') : '알 수 없음';
+            return `
+                <div class="online-user-item">
+                    <div class="account-avatar" style="width:36px;height:36px;margin-right:0;">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </div>
+                    <div class="online-user-info">
+                        <div class="online-user-name">${user.name} (${user.username})</div>
+                        <div class="online-user-meta">${roleText} · 마지막 활동: ${lastTime}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    showModal('onlineUsersContent');
+}
+
+window.addEventListener('beforeunload', () => {
+    if (onlineUsersInterval) {
+        clearInterval(onlineUsersInterval);
+    }
+});

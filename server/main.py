@@ -946,6 +946,35 @@ async def reject_user(user_id: int, db: Session = Depends(get_db), current_user:
     logger.info(f"[관리자] 회원가입 거절: {current_user.username} → {user.username}")
     return {"success": True}
 
+@app.get("/api/admin/online-users")
+async def get_online_users(
+    current_user: User = Depends(get_current_active_admin),
+    db: Session = Depends(get_db)
+):
+    kst = datetime.timezone(datetime.timedelta(hours=9))
+    cutoff_time = datetime.datetime.now(kst) - datetime.timedelta(minutes=5)
+
+    online_users = db.query(User).filter(
+        User.last_heartbeat != None,
+        User.last_heartbeat >= cutoff_time
+    ).all()
+
+    logger.info(f"[관리자] 접속자 목록 조회: {current_user.username} | 접속자 수: {len(online_users)}")
+
+    return {
+        "count": len(online_users),
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "role": u.role,
+                "last_heartbeat": u.last_heartbeat
+            }
+            for u in online_users
+        ]
+    }
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",

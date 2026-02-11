@@ -3,8 +3,10 @@ function initTitleBar() {
         return;
     }
 
-    const isSubdir = window.location.pathname.includes('dongin_ai_agent');
+    const pathname = window.location.pathname;
+    const isSubdir = /\/client\/dongin_[^\/]+\//.test(pathname);
     const logoPath = isSubdir ? '../assets/images/logo.png' : 'assets/images/logo.png';
+    console.log('Titlebar - pathname:', pathname, 'isSubdir:', isSubdir, 'logoPath:', logoPath);
 
     const titlebar = document.createElement('div');
     titlebar.className = 'titlebar';
@@ -12,7 +14,7 @@ function initTitleBar() {
         <div class="titlebar-left">
             <div class="titlebar-logo">
                 <img src="${logoPath}" alt="Logo">
-                <span>DONGIN PORTAL</span>
+                <span>DONGIN PORTAL v0.1.1</span>
             </div>
             <div class="titlebar-title" id="titlebarTitle"></div>
         </div>

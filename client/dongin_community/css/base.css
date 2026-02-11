@@ -9,10 +9,10 @@ body {
     background: var(--bg);
     color: var(--text);
     display: flex;
-    height: 100vh;
+    height: calc(100vh - 32px);
     overflow: hidden;
     transition: background 0.3s ease, color 0.3s ease;
-    padding-top: 32px;
+    margin-top: 32px;
 }
 
 .sidebar {
