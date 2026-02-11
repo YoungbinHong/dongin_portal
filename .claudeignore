@@ -17,6 +17,9 @@ client/package-lock.json
 dist/
 client/dist/
 *.exe
+*.AppImage
+*.deb
+*.rpm
 
 # Database
 *.db
@@ -28,8 +31,18 @@ logs/
 server/logs/
 *.log
 
-# Assets (large files)
-assets/
+# Assets
+client/assets/images/
+client/assets/fonts/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff*
+*.ttf
+*.eot
 
 # Environment
 .env
@@ -46,3 +59,7 @@ api_key
 # OS
 .DS_Store
 Thumbs.db
+
+# Docs
+*.md
+!CLAUDE.md
