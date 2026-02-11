@@ -1,5 +1,12 @@
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
 .inventory-header {
-    padding: 25px 30px;
+    padding: 25px 40px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     display: flex;
     justify-content: space-between;
@@ -24,7 +31,7 @@
     border-radius: 10px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     font-size: 14px;
-    width: 250px;
+    width: 400px;
     outline: none;
     transition: all 0.2s;
 }
@@ -62,7 +69,7 @@
 .inventory-content {
     flex: 1;
     overflow: auto;
-    padding: 20px 30px;
+    padding: 25px 40px;
 }
 
 .inventory-content::-webkit-scrollbar {
@@ -242,4 +249,149 @@ body.dark-theme .action-btn:hover {
 
 body.dark-theme .action-btn svg {
     fill: #b0b0b0;
+}
+
+body.dark-theme .main {
+    background: #16213e;
+}
+
+.inventory-form-modal {
+    background: white;
+    border-radius: 16px;
+    width: 500px;
+    max-width: 90vw;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.form-modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2d3436;
+    margin: 0;
+}
+
+.form-modal-body {
+    padding: 25px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #636e72;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #e17055;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-modal-footer {
+    padding: 16px 25px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.cancel-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    color: #2d3436;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #e17055 0%, #d35400 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(225, 112, 85, 0.3);
+}
+
+body.dark-theme .inventory-form-modal {
+    background: #1e1e2e;
+}
+
+body.dark-theme .form-modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .form-modal-header h2 {
+    color: #ffffff;
+}
+
+body.dark-theme .form-group label {
+    color: #888;
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group select {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+body.dark-theme .form-modal-footer {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .cancel-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+body.dark-theme .cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
 }

@@ -73,7 +73,7 @@
 .device-icon {
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -109,7 +109,7 @@
 .connect-btn {
     width: 100%;
     padding: 11px;
-    background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
     color: white;
     border: none;
     border-radius: 10px;
@@ -180,7 +180,7 @@
 .submit-btn {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
     color: white;
     border: none;
     border-radius: 12px;

@@ -48,7 +48,8 @@ function applyTheme(theme) {
 document.addEventListener('DOMContentLoaded', async () => {
     loadSavedTheme();
     setTimeout(() => {
-        document.body.classList.add('show');
+        document.querySelector('.sidebar').classList.add('show');
+        document.querySelector('.main-container').classList.add('show');
     }, 100);
     await fetchPosts();
     logEvent('커뮤니티 진입');

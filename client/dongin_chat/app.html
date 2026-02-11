@@ -6,10 +6,14 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http: https:;">
     <title>DONGIN CHAT</title>
     <link rel="icon" href="../assets/images/logo.png" type="image/png">
+    <link rel="stylesheet" href="../assets/css/shared/variables.css">
+    <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="../assets/css/titlebar.css">
     <link rel="stylesheet" href="../assets/css/shared/base.css">
     <link rel="stylesheet" href="css/sidebar.css">
     <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="../assets/css/shared/modal.css">
+    <link rel="stylesheet" href="../assets/css/shared/server-status.css">
 </head>
 
 <body>
@@ -61,7 +65,7 @@
         </div>
 
         <div class="sidebar-footer">
-            <div class="footer-icon" onclick="goHome()" title="메뉴로 돌아가기">
+            <div class="footer-icon" onclick="showHomeConfirm()" title="메뉴로 돌아가기">
                 <svg viewBox="0 0 24 24">
                     <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                 </svg>
@@ -125,6 +129,17 @@
                         <option value="dark">어두운 테마</option>
                     </select>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay" style="display: none;">
+        <div id="homeContent" class="alert-modal" style="display: none;">
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text);">메인 메뉴</div>
+            <div style="font-size: 14px; color: #636e72; line-height: 1.6; margin-bottom: 25px;">메인 메뉴로 이동하시겠습니까?</div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex: 1; background: rgba(0,0,0,0.05); color: var(--text); border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="closeModal()">취소</button>
+                <button style="flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; font-weight: 600;" onclick="confirmGoToMenu()">확인</button>
             </div>
         </div>
     </div>

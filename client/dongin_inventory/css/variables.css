@@ -1,0 +1,9 @@
+:root {
+    --accent: #e17055;
+    --accent-dark: #d35400;
+}
+
+body.dark-theme {
+    --accent: #ff8b72;
+    --accent-dark: #e17055;
+}

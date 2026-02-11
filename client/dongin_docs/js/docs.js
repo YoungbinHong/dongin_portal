@@ -11,6 +11,10 @@ const docTypeNames = {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
+    setTimeout(() => {
+        document.querySelector('.sidebar').classList.add('show');
+        document.querySelector('.main-container').classList.add('show');
+    }, 100);
     initDocTypes();
     initFormActions();
 });
@@ -63,17 +67,33 @@ function showHistory() {
     alert('발급 내역 기능은 준비중입니다.');
 }
 
-function goHome() {
-    localStorage.setItem('returnFromApp', 'card-docs');
+function showHomeConfirm() {
+    hideAllModals();
+    document.getElementById('homeContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function confirmGoToMenu() {
+    closeModal();
     const overlay = document.getElementById('logoutOverlay');
     if (overlay) {
         overlay.classList.add('active');
         setTimeout(() => {
-            window.location.href = '../menu.html';
+            window.location.href = '../menu.html?from=docs';
         }, 400);
     } else {
-        window.location.href = '../menu.html';
+        window.location.href = '../menu.html?from=docs';
     }
+}
+
+function hideAllModals() {
+    document.querySelectorAll('.alert-modal').forEach(el => el.style.display = 'none');
+}
+
+function closeModal() {
+    const modalOverlay = document.getElementById('modalOverlay');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    hideAllModals();
 }
 
 function openSettings() {

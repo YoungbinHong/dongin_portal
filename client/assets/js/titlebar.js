@@ -97,3 +97,20 @@ if (document.readyState === 'loading') {
 } else {
     initTitleBar();
 }
+
+// 마우스 뒤로가기/앞으로가기 버튼 비활성화
+window.addEventListener('mouseup', (event) => {
+    if (event.button === 3 || event.button === 4) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    }
+}, true);
+
+window.addEventListener('mousedown', (event) => {
+    if (event.button === 3 || event.button === 4) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    }
+}, true);

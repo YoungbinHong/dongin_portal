@@ -188,8 +188,18 @@ function showHomeConfirm() {
 
 function confirmGoToMenu() {
     closeModal();
+
+    const pathname = window.location.pathname;
+    const appMatch = pathname.match(/client[\/\\]dongin_([^\/\\]+)/);
+    let targetUrl = '../menu.html';
+
+    if (appMatch) {
+        const appName = appMatch[1];
+        targetUrl = `../menu.html?from=${appName}`;
+    }
+
     document.getElementById('logoutOverlay').classList.add('active');
-    setTimeout(() => { window.location.href = '../menu.html'; }, 400);
+    setTimeout(() => { window.location.href = targetUrl; }, 400);
 }
 
 function openSettings() {

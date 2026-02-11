@@ -1,20 +1,18 @@
 :root {
     --bg: #f8faff;
     --sidebar-bg: rgba(255, 255, 255, 0.4);
-    --accent: #a29bfe;
+    --accent: #ff7675;
+    --accent-dark: #d63031;
     --text: #2d3436;
-    --text-secondary: #636e72;
-    --border: rgba(0, 0, 0, 0.08);
     --glass: rgba(255, 255, 255, 0.85);
 }
 
 body.dark-theme {
     --bg: #0f0f0f;
     --sidebar-bg: rgba(25, 25, 25, 0.7);
-    --accent: #b9a8ff;
+    --accent: #ff8a89;
+    --accent-dark: #e74c3c;
     --text: #e8e8e8;
-    --text-secondary: #b0b0b0;
-    --border: rgba(255, 255, 255, 0.1);
     --glass: rgba(25, 25, 25, 0.9);
 }
 
@@ -25,6 +23,12 @@ body.dark-theme select {
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-body.dark-theme input::placeholder {
-    color: #888888;
+body.dark-theme [style*="color: #636e72"],
+body.dark-theme [style*="color:#636e72"] {
+    color: #b0b0b0 !important;
+}
+
+body.dark-theme [style*="background: rgba(0, 0, 0, 0.05)"],
+body.dark-theme [style*="background: rgba(0,0,0,0.05)"] {
+    background: rgba(255, 255, 255, 0.08) !important;
 }

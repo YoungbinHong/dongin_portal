@@ -39,6 +39,10 @@ function createWindow() {
         backgroundColor: '#f5f7fa'
     });
 
+    mainWindow.webContents.setWindowOpenHandler(() => {
+        return { action: 'deny' };
+    });
+
     mainWindow.loadFile('update.html');
 }
 

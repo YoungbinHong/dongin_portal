@@ -4,6 +4,10 @@ let currentRoom = '1';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
+    setTimeout(() => {
+        document.querySelector('.sidebar').classList.add('show');
+        document.querySelector('.main-container').classList.add('show');
+    }, 100);
     initRoomList();
     initMessageInput();
     initSendButton();
@@ -88,17 +92,33 @@ function escapeHtml(text) {
     return div.innerHTML.replace(/\n/g, '<br>');
 }
 
-function goHome() {
-    localStorage.setItem('returnFromApp', 'card-chat');
+function showHomeConfirm() {
+    hideAllModals();
+    document.getElementById('homeContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function confirmGoToMenu() {
+    closeModal();
     const overlay = document.getElementById('logoutOverlay');
     if (overlay) {
         overlay.classList.add('active');
         setTimeout(() => {
-            window.location.href = '../menu.html';
+            window.location.href = '../menu.html?from=chat';
         }, 400);
     } else {
-        window.location.href = '../menu.html';
+        window.location.href = '../menu.html?from=chat';
     }
+}
+
+function hideAllModals() {
+    document.querySelectorAll('.alert-modal').forEach(el => el.style.display = 'none');
+}
+
+function closeModal() {
+    const modalOverlay = document.getElementById('modalOverlay');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    hideAllModals();
 }
 
 function openSettings() {

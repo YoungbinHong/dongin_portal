@@ -4,12 +4,51 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--glass);
+    border-radius: 24px;
+    width: 500px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+    animation: pop 0.3s ease;
+    position: relative;
+}
+
+.modal-header {
+    padding: 24px 30px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.modal-body {
+    padding: 30px;
+    overflow-y: auto;
+    max-height: calc(90vh - 90px);
 }
 
 .alert-modal {
@@ -18,7 +57,7 @@
     border-radius: 30px;
     width: 320px;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid var(--border);
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
     animation: pop 0.3s ease;
 }
@@ -103,6 +142,33 @@ body.dark-theme .settings-menu-item:hover {
     margin-bottom: 20px;
 }
 
+.setting-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.setting-group select,
+.setting-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    background: var(--glass);
+    color: var(--text);
+    transition: all 0.2s ease;
+}
+
+.setting-group select:focus,
+.setting-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
 .setting-label {
     font-size: 14px;
     font-weight: 600;
@@ -116,17 +182,24 @@ body.dark-theme .setting-label {
 }
 
 .close-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.05);
+    background: transparent;
     border: none;
     width: 32px;
     height: 32px;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 18px;
-    color: #636e72;
+    font-size: 24px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.close-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 body.dark-theme .close-btn {
