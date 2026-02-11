@@ -45,35 +45,6 @@ otp_store = {}
 verified_emails = {}
 _last_online_count = None
 
-async def monitor_online_users():
-    """백그라운드에서 접속자 수 변경 감시"""
-    global _last_online_count
-
-    while True:
-        try:
-            await asyncio.sleep(10)
-
-            db = next(get_db())
-            try:
-                threshold = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) - datetime.timedelta(seconds=60)
-
-                online_users = db.query(User).filter(
-                    User.last_heartbeat.isnot(None),
-                    User.last_heartbeat >= threshold,
-                    User.is_active == True
-                ).all()
-
-                count = len(online_users)
-
-                if _last_online_count is not None and _last_online_count != count:
-                    logger.info(f"[접속자 변경] {_last_online_count}명 → {count}명")
-
-                _last_online_count = count
-            finally:
-                db.close()
-        except Exception as e:
-            logger.error(f"[접속자 감시 오류] {str(e)}")
-
 def init_test_accounts(db: Session):
     if not db.query(User).filter(User.username == "admin").first():
         db.add(User(
@@ -166,12 +137,8 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    monitor_task = asyncio.create_task(monitor_online_users())
-    logger.info("접속자 감시 백그라운드 태스크 시작")
-
     yield
 
-    monitor_task.cancel()
     logger.info("="*50)
     logger.info("Dongin Portal 서버 종료")
     logger.info("="*50)
@@ -746,9 +713,25 @@ async def heartbeat(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    global _last_online_count
+
     current_user.last_heartbeat = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
     db.commit()
-    # heartbeat는 너무 빈번하므로 로그 생략
+
+    threshold = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) - datetime.timedelta(seconds=60)
+    online_users = db.query(User).filter(
+        User.last_heartbeat.isnot(None),
+        User.last_heartbeat >= threshold,
+        User.is_active == True
+    ).all()
+
+    count = len(online_users)
+
+    if _last_online_count is not None and _last_online_count != count:
+        logger.info(f"[접속자 변경] {_last_online_count}명 → {count}명")
+
+    _last_online_count = count
+
     return {"status": "ok"}
 
 @app.post("/api/auth/logout")

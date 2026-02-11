@@ -125,6 +125,7 @@ class InventoryResponse(BaseModel):
     low_stock_threshold: int
     location: Optional[str]
     created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
