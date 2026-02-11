@@ -63,3 +63,6 @@ Thumbs.db
 # Docs
 *.md
 !CLAUDE.md
+
+# Development Separation
+server/
