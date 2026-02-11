@@ -102,3 +102,29 @@ class SignupRequest(BaseModel):
     email: str = Field(..., min_length=1)
     password: str = Field(..., min_length=8)
     name: str = Field(..., min_length=1, max_length=100)
+
+class InventoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(..., min_length=1)
+    quantity: int = Field(..., ge=0)
+    low_stock_threshold: int = Field(default=10, ge=0)
+    location: Optional[str] = Field(None, max_length=100)
+
+class InventoryUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = None
+    quantity: Optional[int] = Field(None, ge=0)
+    low_stock_threshold: Optional[int] = Field(None, ge=0)
+    location: Optional[str] = Field(None, max_length=100)
+
+class InventoryResponse(BaseModel):
+    id: int
+    name: str
+    category: str
+    quantity: int
+    low_stock_threshold: int
+    location: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

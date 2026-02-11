@@ -50,3 +50,14 @@ class Comment(Base):
     text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     post = relationship("Post", back_populates="comments")
+
+class Inventory(Base):
+    __tablename__ = "inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    category = Column(String(20), nullable=False)
+    quantity = Column(Integer, default=0, nullable=False)
+    low_stock_threshold = Column(Integer, default=10, nullable=False)
+    location = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

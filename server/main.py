@@ -20,13 +20,14 @@ from email_validator import validate_email, EmailNotValidError
 from logger import logger, get_user_logger, get_access_logger, get_event_logger
 
 from database import engine, get_db, Base
-from models import User, Post, Comment
+from models import User, Post, Comment, Inventory
 from schemas import (
     UserCreate, UserUpdate, UserResponse,
     Token, PasswordChange, EventLog,
     PostCreate, PostResponse, CommentCreate, CommentResponse,
     AiChatRequest,
     CheckEmailRequest, SendOtpRequest, VerifyOtpRequest, SignupRequest,
+    InventoryCreate, InventoryUpdate, InventoryResponse,
 )
 import ai_engine
 from auth import (
@@ -137,6 +138,13 @@ async def lifespan(app: FastAPI):
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE"))
         logger.info("데이터베이스 스키마 업데이트 완료 (email 컬럼 추가)")
+
+    if "inventory" in insp.get_table_names():
+        inv_cols = [c["name"] for c in insp.get_columns("inventory")]
+        if "low_stock_threshold" not in inv_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE inventory ADD COLUMN low_stock_threshold INTEGER DEFAULT 10 NOT NULL"))
+            logger.info("데이터베이스 스키마 업데이트 완료 (low_stock_threshold 컬럼 추가)")
 
     db = next(get_db())
     try:
@@ -1036,6 +1044,72 @@ async def get_online_users(
             for u in online_users
         ]
     }
+
+@app.get("/api/inventory", response_model=List[InventoryResponse])
+async def get_inventory(db: Session = Depends(get_db)):
+    items = db.query(Inventory).order_by(Inventory.created_at.desc()).all()
+    logger.info(f"[재고 목록 조회] 전체 재고 수: {len(items)}")
+    return items
+
+@app.get("/api/inventory/{item_id}", response_model=InventoryResponse)
+async def get_inventory_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(Inventory).filter(Inventory.id == item_id).first()
+    if not item:
+        logger.warning(f"[재고 조회 실패] 이유: 재고 없음 (ID: {item_id})")
+        raise HTTPException(status_code=404, detail="재고 없음")
+    logger.info(f"[재고 조회] ID: {item_id} | 품목: {item.name}")
+    return item
+
+@app.post("/api/inventory", response_model=InventoryResponse, status_code=status.HTTP_201_CREATED)
+async def create_inventory(
+    item_data: InventoryCreate,
+    db: Session = Depends(get_db)
+):
+    item = Inventory(
+        name=item_data.name,
+        category=item_data.category,
+        quantity=item_data.quantity,
+        low_stock_threshold=item_data.low_stock_threshold,
+        location=item_data.location
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    logger.info(f"[재고 추가 완료] 품목: {item.name} | 수량: {item.quantity} | 기준: {item.low_stock_threshold}")
+    return item
+
+@app.put("/api/inventory/{item_id}", response_model=InventoryResponse)
+async def update_inventory(
+    item_id: int,
+    item_data: InventoryUpdate,
+    db: Session = Depends(get_db)
+):
+    item = db.query(Inventory).filter(Inventory.id == item_id).first()
+    if not item:
+        logger.warning(f"[재고 수정 실패] 이유: 재고 없음 (ID: {item_id})")
+        raise HTTPException(status_code=404, detail="재고 없음")
+    update_data = item_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    logger.info(f"[재고 수정 완료] 품목: {item.name} | 수량: {item.quantity} | 기준: {item.low_stock_threshold}")
+    return item
+
+@app.delete("/api/inventory/{item_id}")
+async def delete_inventory(
+    item_id: int,
+    db: Session = Depends(get_db)
+):
+    item = db.query(Inventory).filter(Inventory.id == item_id).first()
+    if not item:
+        logger.warning(f"[재고 삭제 실패] 이유: 재고 없음 (ID: {item_id})")
+        raise HTTPException(status_code=404, detail="재고 없음")
+    item_name = item.name
+    db.delete(item)
+    db.commit()
+    logger.info(f"[재고 삭제 완료] 품목: {item_name}")
+    return {"message": "삭제 완료"}
 
 if __name__ == "__main__":
     uvicorn.run(

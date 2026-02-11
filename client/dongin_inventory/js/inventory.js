@@ -72,8 +72,9 @@ function renderInventory(searchTerm = '') {
     });
 
     tbody.innerHTML = filteredData.map(item => {
-        const statusClass = item.quantity > 10 ? 'status-available' : item.quantity > 0 ? 'status-low' : 'status-out';
-        const statusText = item.quantity > 10 ? '재고있음' : item.quantity > 0 ? '재고부족' : '품절';
+        const threshold = item.low_stock_threshold || 10;
+        const statusClass = item.quantity === 0 ? 'status-out' : item.quantity < threshold ? 'status-low' : 'status-available';
+        const statusText = item.quantity === 0 ? '품절' : item.quantity < threshold ? '재고부족' : '재고있음';
 
         return `
             <tr data-id="${item.id}">
@@ -138,6 +139,7 @@ function openAddModal() {
     document.getElementById('addItemName').value = '';
     document.getElementById('addCategory').value = 'electronics';
     document.getElementById('addQuantity').value = '';
+    document.getElementById('addLowStockThreshold').value = '10';
     document.getElementById('addLocation').value = '';
     document.getElementById('addInventoryModal').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
@@ -147,10 +149,11 @@ async function submitAddInventory() {
     const name = document.getElementById('addItemName').value.trim();
     const category = document.getElementById('addCategory').value;
     const quantity = parseInt(document.getElementById('addQuantity').value);
+    const low_stock_threshold = parseInt(document.getElementById('addLowStockThreshold').value);
     const location = document.getElementById('addLocation').value.trim();
 
-    if (!name || isNaN(quantity)) {
-        alert('품목명과 수량을 입력해주세요.');
+    if (!name || isNaN(quantity) || isNaN(low_stock_threshold)) {
+        alert('품목명, 수량, 재고부족 기준을 입력해주세요.');
         return;
     }
 
@@ -158,7 +161,7 @@ async function submitAddInventory() {
         const response = await fetch(`${API_BASE}/api/inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category, quantity, location })
+            body: JSON.stringify({ name, category, quantity, low_stock_threshold, location })
         });
 
         if (response.ok) {
@@ -182,6 +185,7 @@ function openEditModal(id) {
     document.getElementById('editItemName').value = item.name;
     document.getElementById('editCategory').value = item.category;
     document.getElementById('editQuantity').value = item.quantity;
+    document.getElementById('editLowStockThreshold').value = item.low_stock_threshold || 10;
     document.getElementById('editLocation').value = item.location || '';
     document.getElementById('editInventoryModal').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
@@ -192,10 +196,11 @@ async function submitEditInventory() {
     const name = document.getElementById('editItemName').value.trim();
     const category = document.getElementById('editCategory').value;
     const quantity = parseInt(document.getElementById('editQuantity').value);
+    const low_stock_threshold = parseInt(document.getElementById('editLowStockThreshold').value);
     const location = document.getElementById('editLocation').value.trim();
 
-    if (!name || isNaN(quantity)) {
-        alert('품목명과 수량을 입력해주세요.');
+    if (!name || isNaN(quantity) || isNaN(low_stock_threshold)) {
+        alert('품목명, 수량, 재고부족 기준을 입력해주세요.');
         return;
     }
 
@@ -203,7 +208,7 @@ async function submitEditInventory() {
         const response = await fetch(`${API_BASE}/api/inventory/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category, quantity, location })
+            body: JSON.stringify({ name, category, quantity, low_stock_threshold, location })
         });
 
         if (response.ok) {
