@@ -32,6 +32,7 @@ api_key
 .vscode/
 .aider*
 .claude/
+.claudeignore
 
 # OS
 .DS_Store
