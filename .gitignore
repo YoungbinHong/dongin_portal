@@ -33,6 +33,7 @@ api_key
 .aider*
 .claude/
 .claudeignore
+CLAUDE.md
 
 # OS
 .DS_Store
