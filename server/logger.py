@@ -59,11 +59,6 @@ def get_access_logger():
     access_logger.setLevel(logging.INFO)
     access_logger.propagate = False
 
-    # 콘솔 출력
-    console = logging.StreamHandler(sys.stdout)
-    console.setFormatter(SeoulFormatter("%(asctime)s | %(message)s"))
-    access_logger.addHandler(console)
-
     # access.log 파일
     access_file = RotatingFileHandler(
         LOG_DIR / "access.log",
