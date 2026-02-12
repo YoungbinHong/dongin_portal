@@ -1207,6 +1207,24 @@ async def create_chat_room(
 
             if existing_member_ids == member_ids:
                 logger.info(f"[채팅방 중복] 기존 방 반환: {existing_room.id}")
+
+                # 기존 방도 브로드캐스트
+                await chat_manager.broadcast_to_users(
+                    list(member_ids),
+                    {
+                        "type": "room_created",
+                        "data": {
+                            "id": existing_room.id,
+                            "name": existing_room.name,
+                            "type": existing_room.type,
+                            "members": list(member_ids),
+                            "last_message": None,
+                            "unread_count": 0,
+                            "created_at": existing_room.created_at.isoformat()
+                        }
+                    }
+                )
+
                 return {
                     "id": existing_room.id,
                     "name": existing_room.name,
@@ -1286,10 +1304,15 @@ async def get_chat_rooms(
             ChatMessage.id > (member.last_read_id or 0)
         ).count()
 
+        members = db.query(User).join(ChatRoomMember).filter(
+            ChatRoomMember.room_id == room.id
+        ).all()
+
         result.append({
             "id": room.id,
             "name": room.name,
             "type": room.type,
+            "members": [{"id": m.id, "name": m.name} for m in members],
             "last_message": last_msg.content[:50] if last_msg else None,
             "unread_count": unread_count,
             "updated_at": room.updated_at

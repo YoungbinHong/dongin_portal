@@ -80,14 +80,16 @@ async def handle_websocket_chat(websocket: WebSocket, db: Session):
             if msg_type == "pong":
                 continue
 
-            elif msg_type == "join":
+            elif msg_type in ("join", "join_room"):
                 room_id = data.get("room_id")
+                logger.info(f"[join_room 요청] 사용자: {user.id} | 방: {room_id}")
 
                 member = db.query(ChatRoomMember).filter(
                     ChatRoomMember.room_id == room_id,
                     ChatRoomMember.user_id == user.id
                 ).first()
                 if not member:
+                    logger.warning(f"[join_room 실패] 사용자: {user.id} | 방: {room_id} | 권한 없음")
                     await websocket.send_json({"type": "error", "message": "권한 없음"})
                     continue
 
@@ -96,9 +98,11 @@ async def handle_websocket_chat(websocket: WebSocket, db: Session):
 
                 current_room_id = room_id
                 await chat_manager.register_connection(room_id, user.id, websocket)
+                logger.info(f"[join_room 완료] 사용자: {user.id} | 방: {room_id}")
                 await websocket.send_json({"type": "joined", "room_id": room_id})
 
             elif msg_type == "message":
+                logger.info(f"[메시지 수신] 사용자: {user.id} | 방: {current_room_id}")
                 await chat_manager.handle_message(data, user, current_room_id, websocket, db)
 
             elif msg_type == "file":
