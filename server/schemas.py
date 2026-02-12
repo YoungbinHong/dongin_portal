@@ -136,7 +136,7 @@ class ChatRoomCreate(BaseModel):
     member_ids: Optional[List[int]] = None
 
 class ChatRoomResponse(BaseModel):
-    id: str
+    id: int
     name: str
     type: str
     created_at: datetime
@@ -147,7 +147,7 @@ class ChatRoomResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     id: int
-    room_id: str
+    room_id: int
     user_id: int
     user_name: str
     content: Optional[str]
@@ -157,7 +157,7 @@ class MessageResponse(BaseModel):
     read_by: List[int]
 
 class ChatReadRequest(BaseModel):
-    room_id: str
+    room_id: int
     message_ids: List[int]
 
 class FileUploadResponse(BaseModel):

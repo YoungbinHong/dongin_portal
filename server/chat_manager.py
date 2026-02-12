@@ -5,18 +5,18 @@ from logger import logger
 active_connections = {}
 user_connections = {}
 
-async def get_room_connections(room_id: str):
+async def get_room_connections(room_id: int):
     """채팅방의 모든 연결 반환"""
     return active_connections.get(room_id, {})
 
-async def register_connection(room_id: str, user_id: int, websocket):
+async def register_connection(room_id: int, user_id: int, websocket):
     """채팅방에 연결 등록"""
     if room_id not in active_connections:
         active_connections[room_id] = {}
     active_connections[room_id][user_id] = websocket
     logger.info(f"[WebSocket 연결] 방: {room_id} | 사용자: {user_id}")
 
-async def unregister_connection(room_id: str, user_id: int):
+async def unregister_connection(room_id: int, user_id: int):
     """연결 해제"""
     if room_id in active_connections and user_id in active_connections[room_id]:
         del active_connections[room_id][user_id]
@@ -24,7 +24,7 @@ async def unregister_connection(room_id: str, user_id: int):
             del active_connections[room_id]
         logger.info(f"[WebSocket 해제] 방: {room_id} | 사용자: {user_id}")
 
-async def handle_message(data: dict, user: User, room_id: str, websocket, db: Session):
+async def handle_message(data: dict, user: User, room_id: int, websocket, db: Session):
     """텍스트 메시지 처리"""
     logger.info(f"[handle_message] 사용자: {user.id} | 방: {room_id}")
     if not room_id:
@@ -66,7 +66,7 @@ async def handle_message(data: dict, user: User, room_id: str, websocket, db: Se
         }
     })
 
-async def handle_file_message(data: dict, user: User, room_id: str, websocket, db: Session):
+async def handle_file_message(data: dict, user: User, room_id: int, websocket, db: Session):
     """파일 메시지 처리"""
     if not room_id:
         await websocket.send_json({"type": "error", "message": "채팅방에 입장하지 않음"})
@@ -118,7 +118,7 @@ async def handle_file_message(data: dict, user: User, room_id: str, websocket, d
         }
     })
 
-async def broadcast_message(room_id: str, message: dict):
+async def broadcast_message(room_id: int, message: dict):
     """채팅방 멤버에게 메시지 브로드캐스트"""
     connections = await get_room_connections(room_id)
     logger.info(f"[broadcast_message] 방: {room_id} | 연결된 사용자: {list(connections.keys())}")
@@ -130,7 +130,7 @@ async def broadcast_message(room_id: str, message: dict):
         except Exception as e:
             logger.error(f"[브로드캐스트 실패] 방: {room_id} | 사용자: {user_id} | {e}")
 
-async def broadcast_typing(room_id: str, user_id: int, status: str):
+async def broadcast_typing(room_id: int, user_id: int, status: str):
     """타이핑 상태 브로드캐스트"""
     connections = await get_room_connections(room_id)
 
@@ -144,7 +144,7 @@ async def broadcast_typing(room_id: str, user_id: int, status: str):
             except:
                 pass
 
-async def broadcast_read_receipt(room_id: str, read_data: dict):
+async def broadcast_read_receipt(room_id: int, read_data: dict):
     """읽음 확인 브로드캐스트"""
     connections = await get_room_connections(room_id)
 
@@ -157,7 +157,7 @@ async def broadcast_read_receipt(room_id: str, read_data: dict):
         except:
             pass
 
-async def handle_read(data: dict, user: User, room_id: str, db: Session):
+async def handle_read(data: dict, user: User, room_id: int, db: Session):
     """읽음 확인 처리 (WebSocket 버전)"""
     message_ids = data.get("message_ids", [])
 

@@ -1372,7 +1372,7 @@ async def get_chat_rooms(
 
 @app.get("/api/chat/rooms/{room_id}/messages")
 async def get_messages(
-    room_id: str,
+    room_id: int,
     before: Optional[int] = None,
     limit: int = 50,
     current_user: User = Depends(get_current_user),
@@ -1416,7 +1416,7 @@ async def get_messages(
 @app.post("/api/chat/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    room_id: str = Form(...),
+    room_id: int = Form(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
