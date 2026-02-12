@@ -315,6 +315,31 @@ async def download_page():
             .download-btn:active {{
                 transform: translateY(0);
             }}
+            .notice {{
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 10px;
+                padding: 20px;
+                margin-top: 30px;
+                text-align: left;
+                font-size: 14px;
+                color: #856404;
+            }}
+            .notice h3 {{
+                color: #856404;
+                font-size: 16px;
+                margin-bottom: 10px;
+            }}
+            .notice ol {{
+                margin: 10px 0;
+                padding-left: 20px;
+            }}
+            .notice li {{
+                margin: 5px 0;
+            }}
+            .notice strong {{
+                color: #d63384;
+            }}
         </style>
     </head>
     <body>
@@ -322,7 +347,20 @@ async def download_page():
             <h1>DONGIN PORTAL</h1>
             <div class="version">버전 {version}</div>
             <div class="info">파일 크기: {file_size_mb:.1f} MB</div>
-            <a href="/download/latest" class="download-btn">다운로드</a>
+            <a href="/updates/DONGIN PORTAL_v0.1.1_Setup.exe" class="download-btn">다운로드</a>
+
+            <div class="notice">
+                <h3>⚠️ 최초 접속 시 안내</h3>
+                <p>보안 경고가 나타나면 다음과 같이 진행하세요:</p>
+                <ol>
+                    <li><strong>"고급"</strong> 버튼 클릭</li>
+                    <li><strong>"192.168.0.254(안전하지 않음)로 이동"</strong> 클릭</li>
+                    <li>완료! (이후 경고 없음)</li>
+                </ol>
+                <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                    ※ 회사 내부 서버라 안전합니다
+                </p>
+            </div>
         </div>
     </body>
     </html>
@@ -342,11 +380,21 @@ async def download_latest():
     filename = os.path.basename(path_val)
     logger.info(f"[다운로드] 파일: {filename} | 버전: {version}")
 
+    if filename.endswith(".zip"):
+        media_type = "application/zip"
+    elif filename.endswith(".exe"):
+        media_type = "application/x-msdownload"
+    else:
+        media_type = "application/octet-stream"
+
     return FileResponse(
         file_path,
-        media_type="application/octet-stream",
+        media_type=media_type,
         filename=filename,
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\"",
+            "Cache-Control": "no-cache"
+        }
     )
 
 app.mount("/updates", StaticFiles(directory=UPDATES_DIR), name="updates")
@@ -1095,11 +1143,29 @@ async def delete_inventory(
     return {"message": "삭제 완료"}
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        workers=1,
-        limit_concurrency=400,
-        log_level="info"
-    )
+    cert_file = os.path.join(os.path.dirname(__file__), "certs", "cert.pem")
+    key_file = os.path.join(os.path.dirname(__file__), "certs", "key.pem")
+
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        logger.info("HTTPS 인증서 발견 - HTTPS 모드로 실행")
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8000,
+            workers=1,
+            limit_concurrency=400,
+            log_level="info",
+            ssl_keyfile=key_file,
+            ssl_certfile=cert_file
+        )
+    else:
+        logger.warning("HTTPS 인증서 없음 - HTTP 모드로 실행")
+        logger.warning("python server/generate_cert.py 실행하여 인증서 생성")
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8000,
+            workers=1,
+            limit_concurrency=400,
+            log_level="info"
+        )
