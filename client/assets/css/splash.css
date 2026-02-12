@@ -1,0 +1,154 @@
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    overflow: hidden;
+    position: relative;
+    opacity: 0;
+    transition: opacity 0.8s ease-out;
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", sans-serif;
+}
+
+.wave-wrapper {
+    display: none;
+}
+
+.wave {
+    position: absolute;
+    top: -110%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(135deg, #a29bfe 0%, #74b9ff 100%);
+    border-radius: 48%;
+    opacity: 0.4;
+    animation: wave-rotate 25s linear infinite;
+}
+
+.wave:nth-child(2) {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    animation-duration: 35s;
+    animation-direction: reverse;
+    opacity: 0.2;
+}
+
+.wave:nth-child(3) {
+    background: linear-gradient(135deg, #81ecec 0%, #74b9ff 100%);
+    animation-duration: 45s;
+    opacity: 0.2;
+}
+
+.splash-wrapper {
+    position: relative;
+    z-index: 10;
+}
+
+.splash-card {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    text-align: center;
+    width: 100vw;
+    height: 100vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.developer-text {
+    font-size: 36px;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 24px;
+    min-height: 54px;
+    text-shadow:
+        -1px -1px 0 white,
+        1px -1px 0 white,
+        -1px 1px 0 white,
+        1px 1px 0 white,
+        -2px 0 0 white,
+        2px 0 0 white,
+        0 -2px 0 white,
+        0 2px 0 white;
+}
+
+.electron-text,
+.claude-text {
+    font-size: 28px;
+    font-weight: 500;
+    color: #636e72;
+    margin-bottom: 16px;
+    opacity: 0;
+    text-shadow:
+        -1px -1px 0 white,
+        1px -1px 0 white,
+        -1px 1px 0 white,
+        1px 1px 0 white,
+        -1px 0 0 white,
+        1px 0 0 white,
+        0 -1px 0 white,
+        0 1px 0 white;
+}
+
+.electron-text {
+    animation: text-fadein 1.0s cubic-bezier(0.23, 1, 0.32, 1) 4.0s forwards;
+}
+
+.claude-text {
+    animation: text-fadein 1.0s cubic-bezier(0.23, 1, 0.32, 1) 4.0s forwards;
+}
+
+@keyframes wave-rise {
+    0% {
+        transform: translateY(100%) rotate(0deg);
+    }
+    100% {
+        transform: translateY(-30%) rotate(15deg);
+    }
+}
+
+@keyframes card-appear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes wave-rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.splash-wrapper.exit {
+    animation: fadeout 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.wave-wrapper.exit {
+    animation: fadeout 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes text-fadein {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeout {
+    to {
+        opacity: 0;
+    }
+}

@@ -6,6 +6,8 @@ body {
     background-color: #f8faff;
     overflow: hidden;
     position: relative;
+    opacity: 0;
+    transition: opacity 0.6s ease-out;
 }
 
 .wave-wrapper {
@@ -278,5 +280,11 @@ h1 {
     to {
         opacity: 0;
         transform: scale(1.05);
+    }
+}
+
+@keyframes body-fadein {
+    to {
+        opacity: 1;
     }
 }

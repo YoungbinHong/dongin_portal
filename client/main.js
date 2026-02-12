@@ -22,10 +22,10 @@ let mainWindow;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 800,
-        minWidth: 1280,
-        minHeight: 800,
+        width: 500,
+        height: 300,
+        resizable: false,
+        transparent: true,
         icon: path.join(__dirname, 'assets', 'images', 'logo.png'),
         title: `DONGIN PORTAL v${app.getVersion()}`,
         webPreferences: {
@@ -35,16 +35,43 @@ function createWindow() {
         },
         autoHideMenuBar: true,
         frame: false,
-        titleBarStyle: 'hidden',
-        backgroundColor: '#f5f7fa'
+        titleBarStyle: 'hidden'
     });
 
     mainWindow.webContents.setWindowOpenHandler(() => {
         return { action: 'deny' };
     });
 
-    mainWindow.loadFile('update.html');
+    mainWindow.loadFile('splash.html');
 }
+
+ipcMain.handle('go-to-update', () => {
+    if (mainWindow) {
+        mainWindow.close();
+        mainWindow = new BrowserWindow({
+            width: 1280,
+            height: 800,
+            resizable: true,
+            icon: path.join(__dirname, 'assets', 'images', 'logo.png'),
+            title: `DONGIN PORTAL v${app.getVersion()}`,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js')
+            },
+            autoHideMenuBar: true,
+            frame: false,
+            titleBarStyle: 'hidden',
+            backgroundColor: '#f8faff'
+        });
+        mainWindow.setMinimumSize(1280, 800);
+        mainWindow.center();
+        mainWindow.webContents.setWindowOpenHandler(() => {
+            return { action: 'deny' };
+        });
+        mainWindow.loadFile('update.html');
+    }
+});
 
 ipcMain.handle('go-to-login', () => {
     if (mainWindow) {

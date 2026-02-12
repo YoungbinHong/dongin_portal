@@ -5,6 +5,13 @@ const statusText = document.getElementById('statusText');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
+// 페이드인
+requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+        document.body.style.opacity = '1';
+    });
+});
+
 async function setAppTitle() {
     try {
         const version = await window.api.getAppVersion();
