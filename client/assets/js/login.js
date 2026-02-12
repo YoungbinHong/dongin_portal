@@ -123,6 +123,14 @@ document.addEventListener('keypress', function(e) {
     }
 });
 
+document.getElementById('otpCode').addEventListener('input', async function() {
+    this.value = this.value.replace(/\D/g, '');
+    const code = this.value;
+    if (code.length === 6) {
+        await verifyOTP(code);
+    }
+});
+
 let otpVerified = false;
 let currentEmail = '';
 let lastOtpSendTime = 0;
@@ -137,6 +145,7 @@ function openSignup(e) {
 function resetSignupForm() {
     document.getElementById('signupEmail').value = '';
     document.getElementById('otpCode').value = '';
+    document.getElementById('otpCode').disabled = false;
     document.getElementById('signupPassword').value = '';
     document.getElementById('signupName').value = '';
     document.getElementById('emailError').textContent = '';
@@ -243,13 +252,6 @@ async function sendOTP() {
         document.getElementById('otpGroup').style.display = 'block';
         verifyBtn.textContent = '발송';
         verifyBtn.disabled = false;
-
-        document.getElementById('otpCode').addEventListener('input', async function() {
-            const code = this.value.trim();
-            if (code.length === 6) {
-                await verifyOTP(code);
-            }
-        });
 
     } catch (e) {
         emailError.textContent = e.message;

@@ -1,6 +1,6 @@
 {
   "name": "dongin-portal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -30,15 +30,17 @@
           "x64"
         ]
       },
-      "icon": "icon.ico"
+      "icon": "assets/images/logo.png"
     },
     "nsis": {
       "artifactName": "${productName}_v${version}_Setup.exe",
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "differentialPackage": false,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerSidebar": "assets/images/logo.png"
     },
     "extraResources": [
       {
