@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http: https:;">
     <title>DONGIN PORTAL</title>
-    <link rel="icon" href="assets/images/logo.png" type="image/png">
     <link rel="stylesheet" href="assets/css/common.css">
     <link rel="stylesheet" href="assets/css/titlebar.css">
     <link rel="stylesheet" href="assets/css/update.css">
@@ -54,6 +53,16 @@
             <h2>서버와 연결할 수 없습니다</h2>
             <p>네트워크 상태를 확인하고 다시 시도해주세요.</p>
             <button onclick="window.api.quitApp()">종료</button>
+        </div>
+    </div>
+
+    <div id="updateModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">🔄</div>
+            <h2>새 버전 업데이트 필요</h2>
+            <p id="updateVersionText"></p>
+            <p>지금 설치하시겠습니까?</p>
+            <button id="updateConfirmBtn">확인</button>
         </div>
     </div>
 

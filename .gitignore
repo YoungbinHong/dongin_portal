@@ -10,6 +10,9 @@ env/
 # Node.js
 client/node_modules/
 client/package-lock.json
+updater/node_modules/
+updater/dist/
+updater/package-lock.json
 
 # Build outputs
 client/dist/

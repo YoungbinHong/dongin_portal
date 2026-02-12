@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('api', {
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     checkUpdate: (baseUrl, version) => ipcRenderer.invoke('check-update', baseUrl, version),
     downloadAndInstall: (fullUrl) => ipcRenderer.invoke('download-and-install', fullUrl),
+    onUpdateInstalling: (callback) => ipcRenderer.on('update-installing', callback),
+    onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
 
     // ===== 윈도우 컨트롤 =====
     windowMinimize: () => ipcRenderer.invoke('window-minimize'),

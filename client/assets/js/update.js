@@ -73,11 +73,7 @@ async function checkUpdate() {
     }
 
     if (data.updateAvailable && data.downloadUrl) {
-        statusText.textContent = `새 버전 ${data.version || ''} 다운로드중...`;
-        progressBar.classList.add('determinate');
-        progressBar.style.width = '100%';
-        progressText.textContent = '설치 파일 받는 중...';
-        await window.api.downloadAndInstall(API_BASE + data.downloadUrl);
+        showUpdateModal(data.version, data.downloadUrl);
         return;
     }
 
@@ -96,5 +92,33 @@ function closeLatestModal() {
 }
 
 document.getElementById('latestModalBtn').addEventListener('click', closeLatestModal);
+
+function showUpdateModal(version, downloadUrl) {
+    const modal = document.getElementById('updateModal');
+    const versionText = document.getElementById('updateVersionText');
+    versionText.textContent = version ? `버전: ${version}` : '';
+    modal.classList.add('show');
+
+    document.getElementById('updateConfirmBtn').onclick = async () => {
+        modal.classList.remove('show');
+        statusText.textContent = `새 버전 ${version || ''} 다운로드중...`;
+        progressBar.classList.add('determinate');
+        progressBar.style.width = '100%';
+        progressText.textContent = '설치 파일 받는 중...';
+
+        window.api.onUpdateInstalling(() => {
+            statusText.textContent = '업데이트 설치 중...';
+            progressText.textContent = '잠시 후 자동으로 재시작됩니다.';
+            progressBar.style.width = '0%';
+        });
+
+        window.api.onUpdateProgress((progress) => {
+            progressBar.style.width = progress + '%';
+            progressText.textContent = `설치 중... ${progress}%`;
+        });
+
+        await window.api.downloadAndInstall(API_BASE + downloadUrl);
+    };
+}
 
 checkUpdate();

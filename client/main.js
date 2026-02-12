@@ -6,7 +6,7 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const os = require('os');
 const crypto = require('crypto');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const { PDFDocument } = require('pdf-lib');
 
 // 암호화 설정
@@ -321,7 +321,7 @@ ipcMain.handle('check-update', (event, baseUrl, version) => {
 ipcMain.handle('download-and-install', async (event, fullUrl) => {
     const url = new URL(fullUrl);
     const protocol = url.protocol === 'https:' ? https : http;
-    const destPath = path.join(os.tmpdir(), path.basename(url.pathname) || 'DONGIN_PORTAL_Setup.exe');
+    const destPath = path.join(os.tmpdir(), decodeURIComponent(path.basename(url.pathname)) || 'DONGIN_PORTAL_Setup.exe');
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
         protocol.get(fullUrl, { timeout: 120000 }, (res) => {
@@ -332,10 +332,32 @@ ipcMain.handle('download-and-install', async (event, fullUrl) => {
             }
             res.pipe(file);
             file.on('finish', () => {
-                file.close();
-                shell.openPath(destPath);
-                setTimeout(() => app.quit(), 500);
-                resolve({ success: true });
+                file.close(() => {
+                    const updaterSrc = path.join(process.resourcesPath, 'updater.exe');
+
+                    if (!fs.existsSync(updaterSrc)) {
+                        const installer = spawn(destPath, ['/S'], { detached: true, stdio: 'ignore' });
+                        installer.unref();
+                        setTimeout(() => app.quit(), 1000);
+                        return resolve({ success: true });
+                    }
+
+                    const updaterPath = path.join(os.tmpdir(), 'dongin-updater.exe');
+                    fs.copyFileSync(updaterSrc, updaterPath);
+
+                    const configPath = path.join(os.tmpdir(), 'dongin-updater-config.json');
+                    fs.writeFileSync(configPath, JSON.stringify({
+                        setupPath: destPath,
+                        version: app.getVersion(),
+                        appExePath: process.execPath,
+                        appPid: process.pid
+                    }));
+
+                    spawn(updaterPath, [configPath], { detached: true, stdio: 'ignore' }).unref();
+
+                    setTimeout(() => app.quit(), 500);
+                    resolve({ success: true });
+                });
             });
         }).on('error', (err) => {
             file.close();

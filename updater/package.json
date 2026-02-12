@@ -1,0 +1,23 @@
+{
+  "name": "dongin-portal-updater",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.dongin.portal.updater",
+    "productName": "DONGIN PORTAL Updater",
+    "win": {
+      "target": "portable",
+      "icon": "../client/icon.ico"
+    },
+    "portable": {
+      "artifactName": "updater.exe"
+    }
+  }
+}

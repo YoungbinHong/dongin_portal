@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+    <title>DONGIN PORTAL 업데이트</title>
+    <link rel="stylesheet" href="assets/css/install.css">
+</head>
+
+<body>
+    <div class="update-card" style="opacity: 0; animation: card-appear 0.6s ease 0.2s forwards;">
+        <h1>
+            <span class="t1">DONGIN</span>
+            <span class="t2">PORTAL</span>
+        </h1>
+        <p id="statusText" class="status-text">업데이트 설치 중...</p>
+        <p id="versionText" class="version-text"></p>
+        <div class="progress-container">
+            <div id="progressBar" class="progress-bar determinate"></div>
+        </div>
+        <p id="progressText" class="progress-text">0%</p>
+    </div>
+
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">⚠️</div>
+            <h2>설치 실패</h2>
+            <p id="errorText"></p>
+        </div>
+    </div>
+
+    <script src="assets/js/install.js"></script>
+</body>
+
+</html>

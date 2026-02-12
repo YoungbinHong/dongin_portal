@@ -4,12 +4,12 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "prebuild": "cd ../updater && npm install && npm run build",
     "build": "electron-builder --win nsis --x64",
     "build:32": "electron-builder --win nsis --ia32",
     "build:all": "electron-builder --win nsis"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.624"
   },
@@ -33,8 +33,16 @@
       "artifactName": "${productName}_v${version}_Setup.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "differentialPackage": false
+      "differentialPackage": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
+    "extraResources": [
+      {
+        "from": "../updater/dist/updater.exe",
+        "to": "updater.exe"
+      }
+    ],
     "publish": {
       "provider": "generic",
       "url": "http://192.168.0.254:8000/updates"
