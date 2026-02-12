@@ -144,6 +144,37 @@ body.dark-theme .room-list::-webkit-scrollbar-thumb {
     justify-content: center;
 }
 
+.room-hide-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.room-item:hover .room-hide-btn {
+    opacity: 1;
+}
+
+.room-hide-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .room-hide-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.room-hide-btn svg {
+    fill: var(--text-secondary);
+}
+
 .sidebar-footer {
     padding: 16px;
     border-top: 1px solid var(--border);

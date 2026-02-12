@@ -9,6 +9,14 @@ const crypto = require('crypto');
 const { exec, spawn } = require('child_process');
 const { PDFDocument } = require('pdf-lib');
 
+// 멀티 인스턴스 지원: 각 인스턴스에 다른 userData 경로 사용
+const instanceId = process.argv.find(arg => arg.startsWith('--instance='));
+if (instanceId) {
+    const id = instanceId.split('=')[1];
+    const userDataPath = path.join(app.getPath('userData'), `instance-${id}`);
+    app.setPath('userData', userDataPath);
+}
+
 // 암호화 설정
 const ALGORITHM = 'aes-256-cbc';
 const SECRET_KEY = crypto.scryptSync('dongin-password', 'salt', 32);
@@ -544,6 +552,69 @@ ipcMain.handle('unlock-pdf-bruteforce', async (event, inputPath, outputPath, opt
             }
         }
         return { success: false, error: '비밀번호를 찾지 못했습니다.' };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('show-notification', (event, { title, body, roomId }) => {
+    const { Notification } = require('electron');
+
+    if (!Notification.isSupported()) {
+        return { success: false, error: 'Notifications not supported' };
+    }
+
+    const notification = new Notification({
+        title,
+        body,
+        icon: path.join(__dirname, 'assets', 'images', 'logo.png')
+    });
+
+    notification.on('click', () => {
+        if (mainWindow) {
+            mainWindow.focus();
+            mainWindow.webContents.send('select-room', roomId);
+        }
+    });
+
+    notification.show();
+    return { success: true };
+});
+
+ipcMain.handle('upload-file', async (event, { roomId, filePath }) => {
+    try {
+        const fileData = await fsPromises.readFile(filePath);
+        const base64 = fileData.toString('base64');
+        const CHUNK_SIZE = 500 * 1024;
+        const chunks = [];
+
+        for (let i = 0; i < base64.length; i += CHUNK_SIZE) {
+            chunks.push(base64.slice(i, i + CHUNK_SIZE));
+        }
+
+        return { success: true, chunks, filename: path.basename(filePath) };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('download-file', async (event, { url, savePath }) => {
+    try {
+        const file = fs.createWriteStream(savePath);
+        const protocol = url.startsWith('https') ? https : http;
+
+        return new Promise((resolve, reject) => {
+            protocol.get(url, (response) => {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    resolve({ success: true, savePath });
+                });
+            }).on('error', (err) => {
+                fs.unlink(savePath, () => {});
+                reject({ success: false, error: err.message });
+            });
+        });
     } catch (err) {
         return { success: false, error: err.message };
     }

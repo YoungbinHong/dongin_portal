@@ -185,9 +185,17 @@ body.dark-theme .input-btn:hover {
     font-size: 14px;
     font-family: inherit;
     resize: none;
-    max-height: 120px;
+    max-height: 50vh;
+    min-height: 44px;
     outline: none;
     transition: all 0.2s;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#messageInput::-webkit-scrollbar {
+    display: none;
 }
 
 #messageInput::placeholder {
@@ -228,4 +236,223 @@ body.dark-theme .input-btn:hover {
 
 body.dark-theme .message.sent .message-text {
     background: linear-gradient(135deg, var(--accent-dark) 0%, #00a389 100%);
+}
+
+.typing-indicator {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 10px 30px;
+    font-style: italic;
+}
+
+.connection-status {
+    position: fixed;
+    top: 80px;
+    right: 30px;
+    background: #e74c3c;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    z-index: 1000;
+}
+
+.message-read-count {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.message-unread-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ff6b6b;
+    margin-top: 4px;
+}
+
+.message-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 12px;
+    max-width: 300px;
+}
+
+body.dark-theme .message-file {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.message-file.message-image {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message-file img {
+    max-width: 250px;
+    max-height: 200px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.file-icon {
+    width: 32px;
+    height: 32px;
+    fill: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.room-badge {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 12px;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* 새 채팅 버튼 */
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 32px);
+    margin: 16px;
+    padding: 12px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.new-chat-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(162, 155, 254, 0.3);
+}
+
+.new-chat-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+/* 사용자 검색 결과 */
+.user-search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.user-item:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.dark-theme .user-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-avatar svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-secondary);
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.user-email {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.search-empty,
+.search-error {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* 빈 상태 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.empty-room-list {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
 }

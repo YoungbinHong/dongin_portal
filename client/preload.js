@@ -64,8 +64,11 @@ contextBridge.exposeInMainWorld('api', {
     splitPdfEach: (inputPath, outputDir) => ipcRenderer.invoke('split-pdf-each', inputPath, outputDir),
     mergePdfs: (inputPaths, outputPath) => ipcRenderer.invoke('merge-pdfs', inputPaths, outputPath),
     unlockPdfBruteforce: (inputPath, outputPath, options) => ipcRenderer.invoke('unlock-pdf-bruteforce', inputPath, outputPath, options),
-    onBruteforceProgress: (callback) => ipcRenderer.on('bruteforce-progress', (_, data) => callback(data))
+    onBruteforceProgress: (callback) => ipcRenderer.on('bruteforce-progress', (_, data) => callback(data)),
 
-    // ===== AI Agent =====
-    // (AI Agent 관련 API가 있다면 여기에 추가)
+    // ===== Chat =====
+    showNotification: (title, body, roomId) => ipcRenderer.invoke('show-notification', { title, body, roomId }),
+    onSelectRoom: (callback) => ipcRenderer.on('select-room', (_, roomId) => callback(roomId)),
+    uploadFile: (roomId, filePath) => ipcRenderer.invoke('upload-file', { roomId, filePath }),
+    downloadFile: (url, savePath) => ipcRenderer.invoke('download-file', { url, savePath })
 });
