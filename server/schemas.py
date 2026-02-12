@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class AiChatMessage(BaseModel):
@@ -129,3 +129,43 @@ class InventoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ChatRoomCreate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    type: str = Field(default="group")
+    member_ids: Optional[List[int]] = None
+
+class ChatRoomResponse(BaseModel):
+    id: str
+    name: str
+    type: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class MessageResponse(BaseModel):
+    id: int
+    room_id: str
+    user_id: int
+    user_name: str
+    content: Optional[str]
+    type: str
+    file_id: Optional[str]
+    created_at: str
+    read_by: List[int]
+
+class ChatReadRequest(BaseModel):
+    room_id: str
+    message_ids: List[int]
+
+class FileUploadResponse(BaseModel):
+    file_id: str
+    filename: str
+    thumbnail: Optional[str]
+
+class UserSearchResponse(BaseModel):
+    id: int
+    name: str
+    email: Optional[str]

@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, Depends, HTTPException, status, Request, WebSocket, UploadFile, File, Form
+from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
+from typing import List, Optional
 import uvicorn
 import os
 import time
@@ -18,9 +19,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email_validator import validate_email, EmailNotValidError
 from logger import logger, get_user_logger, get_access_logger, get_event_logger
+import uuid
 
 from database import engine, get_db, Base
-from models import User, Post, Comment, Inventory
+from models import User, Post, Comment, Inventory, ChatRoom, ChatRoomMember, ChatMessage, ChatFile, ChatReadReceipt
 from schemas import (
     UserCreate, UserUpdate, UserResponse,
     Token, PasswordChange, EventLog,
@@ -28,12 +30,16 @@ from schemas import (
     AiChatRequest,
     CheckEmailRequest, SendOtpRequest, VerifyOtpRequest, SignupRequest,
     InventoryCreate, InventoryUpdate, InventoryResponse,
+    ChatRoomCreate, ChatRoomResponse, MessageResponse, ChatReadRequest, FileUploadResponse,
 )
 import ai_engine
 from auth import (
     get_password_hash, verify_password, create_access_token,
     get_current_user, get_current_active_admin
 )
+import chat_websocket
+import chat_manager
+from chat_file_handler import save_chat_file, create_thumbnail, validate_mime_type
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
@@ -330,16 +336,6 @@ async def download_page():
                 font-size: 16px;
                 margin-bottom: 10px;
             }}
-            .notice ol {{
-                margin: 10px 0;
-                padding-left: 20px;
-            }}
-            .notice li {{
-                margin: 5px 0;
-            }}
-            .notice strong {{
-                color: #d63384;
-            }}
         </style>
     </head>
     <body>
@@ -350,13 +346,14 @@ async def download_page():
             <a href="/updates/DONGIN PORTAL_v0.1.1_Setup.exe" class="download-btn">다운로드</a>
 
             <div class="notice">
-                <h3>⚠️ 최초 접속 시 안내</h3>
-                <p>보안 경고가 나타나면 다음과 같이 진행하세요:</p>
-                <ol>
-                    <li><strong>"고급"</strong> 버튼 클릭</li>
-                    <li><strong>"192.168.0.254(안전하지 않음)로 이동"</strong> 클릭</li>
-                    <li>완료! (이후 경고 없음)</li>
-                </ol>
+                <h3>⚠️ Edge 브라우저 사용 시</h3>
+                <p>다운로드가 차단되면 다음 순서로 진행:</p>
+                <p>
+                    <strong>1)</strong> 다운로드 바에서 <strong>"..."</strong> 클릭<br>
+                    <strong>2)</strong> <strong>"유지"</strong> 클릭<br>
+                    <strong>3)</strong> 아래 <strong>"∨"</strong> 클릭<br>
+                    <strong>4)</strong> <strong>"그래도 계속"</strong> 클릭
+                </p>
                 <p style="margin-top: 10px; font-size: 12px; color: #999;">
                     ※ 회사 내부 서버라 안전합니다
                 </p>
@@ -382,19 +379,30 @@ async def download_latest():
 
     if filename.endswith(".zip"):
         media_type = "application/zip"
+        headers = {
+            "Content-Disposition": f"attachment; filename=\"{filename}\"",
+            "Cache-Control": "no-cache"
+        }
     elif filename.endswith(".exe"):
-        media_type = "application/x-msdownload"
+        media_type = "application/octet-stream"
+        headers = {
+            "Content-Disposition": f"attachment; filename=\"{filename}\"",
+            "Cache-Control": "no-cache",
+            "X-Download-Options": "noopen",
+            "X-Content-Type-Options": "nosniff"
+        }
     else:
         media_type = "application/octet-stream"
+        headers = {
+            "Content-Disposition": f"attachment; filename=\"{filename}\"",
+            "Cache-Control": "no-cache"
+        }
 
     return FileResponse(
         file_path,
         media_type=media_type,
         filename=filename,
-        headers={
-            "Content-Disposition": f"attachment; filename=\"{filename}\"",
-            "Cache-Control": "no-cache"
-        }
+        headers=headers
     )
 
 app.mount("/updates", StaticFiles(directory=UPDATES_DIR), name="updates")
@@ -623,8 +631,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성화된 계정")
     access_token = create_access_token(data={"sub": user.username, "role": user.role})
     logger.info(f"[로그인 성공] 사용자: {user.username} | 역할: {user.role}")
-    user_logger = get_user_logger(user.username)
-    user_logger.info(f"[로그인 성공] 역할: {user.role}")
+    get_user_logger(user.username).info(f"[로그인 성공] 역할: {user.role}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/users/me", response_model=UserResponse)
@@ -657,6 +664,24 @@ async def get_users(
     users = db.query(User).offset(skip).limit(limit).all()
     logger.info(f"[사용자 목록 조회] 관리자: {current_user.username} | 조회된 사용자 수: {len(users)}")
     return users
+
+@app.get("/api/users/search")
+async def search_users(
+    q: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not q or len(q.strip()) == 0:
+        return []
+
+    search_term = f"%{q}%"
+    users = db.query(User).filter(
+        User.id != current_user.id,
+        User.is_active == True,
+        (User.name.ilike(search_term) | User.email.ilike(search_term))
+    ).limit(20).all()
+
+    return [{"id": u.id, "name": u.name, "email": u.email or ""} for u in users]
 
 @app.get("/api/users/{user_id}", response_model=UserResponse)
 async def get_user(
@@ -794,10 +819,8 @@ async def log_event(
     event: EventLog,
     current_user: User = Depends(get_current_user)
 ):
-    event_logger = get_event_logger()
-    event_logger.info(f"[이벤트] 사용자: {current_user.username} | 동작: {event.action}")
-    user_logger = get_user_logger(current_user.username)
-    user_logger.info(f"[이벤트] 동작: {event.action}")
+    get_event_logger().info(f"[이벤트] 사용자: {current_user.username} | 동작: {event.action}")
+    get_user_logger(current_user.username).info(f"[이벤트] 동작: {event.action}")
     return {"message": "ok"}
 
 def _post_to_dict(post: Post) -> dict:
@@ -1141,6 +1164,356 @@ async def delete_inventory(
     db.commit()
     logger.info(f"[재고 삭제 완료] 품목: {item_name}")
     return {"message": "삭제 완료"}
+
+@app.websocket("/ws/chat")
+async def websocket_chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    await chat_websocket.handle_websocket_chat(websocket, db)
+
+@app.post("/api/chat/rooms")
+async def create_chat_room(
+    room_data: ChatRoomCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    member_ids = set(room_data.member_ids or [])
+    member_ids.add(current_user.id)
+
+    # 멤버 존재 확인
+    for uid in member_ids:
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            raise HTTPException(400, f"User {uid} not found")
+
+    # 1:1 채팅 처리
+    if room_data.type == "direct":
+        if len(member_ids) != 2:
+            raise HTTPException(400, "1:1 채팅은 2명만 가능")
+
+        # 기존 1:1 방 검색
+        existing_room = db.query(ChatRoom).filter(
+            ChatRoom.type == "direct"
+        ).join(ChatRoomMember, ChatRoom.id == ChatRoomMember.room_id).filter(
+            ChatRoomMember.user_id.in_(member_ids)
+        ).group_by(ChatRoom.id).having(
+            func.count(ChatRoomMember.user_id) == len(member_ids)
+        ).first()
+
+        if existing_room:
+            # 정확히 같은 멤버 조합인지 검증
+            existing_members = db.query(ChatRoomMember.user_id).filter(
+                ChatRoomMember.room_id == existing_room.id
+            ).all()
+            existing_member_ids = {m.user_id for m in existing_members}
+
+            if existing_member_ids == member_ids:
+                logger.info(f"[채팅방 중복] 기존 방 반환: {existing_room.id}")
+                return {
+                    "id": existing_room.id,
+                    "name": existing_room.name,
+                    "type": existing_room.type,
+                    "members": list(member_ids)
+                }
+
+        # 1:1 대화 이름 = 상대방 이름
+        if not room_data.name:
+            other_user_id = (member_ids - {current_user.id}).pop()
+            other_user = db.query(User).filter(User.id == other_user_id).first()
+            room_name = other_user.name
+        else:
+            room_name = room_data.name
+    else:
+        # 그룹 채팅 이름 = 멤버 이름 조합 (name 미제공 시)
+        if not room_data.name:
+            users = db.query(User).filter(User.id.in_(member_ids)).all()
+            user_names = [u.name for u in users]
+            room_name = ", ".join(sorted(user_names))
+        else:
+            room_name = room_data.name
+
+    # 새 채팅방 생성
+    room = ChatRoom(name=room_name, type=room_data.type)
+    db.add(room)
+    db.flush()
+
+    for uid in member_ids:
+        db.add(ChatRoomMember(room_id=room.id, user_id=uid))
+
+    db.commit()
+    db.refresh(room)
+    logger.info(f"[채팅방 생성] ID: {room.id} | 이름: {room.name} | 타입: {room.type} | 멤버: {len(member_ids)}명")
+
+    # WebSocket 브로드캐스트
+    await chat_manager.broadcast_to_users(
+        list(member_ids),
+        {
+            "type": "room_created",
+            "data": {
+                "id": room.id,
+                "name": room.name,
+                "type": room.type,
+                "members": list(member_ids),
+                "last_message": None,
+                "unread_count": 0,
+                "created_at": room.created_at.isoformat()
+            }
+        }
+    )
+
+    return {"id": room.id, "name": room.name, "type": room.type, "members": list(member_ids)}
+
+@app.get("/api/chat/rooms")
+async def get_chat_rooms(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    rooms = db.query(ChatRoom).join(ChatRoomMember).filter(
+        ChatRoomMember.user_id == current_user.id
+    ).order_by(ChatRoom.updated_at.desc()).all()
+
+    result = []
+    for room in rooms:
+        last_msg = db.query(ChatMessage).filter(
+            ChatMessage.room_id == room.id
+        ).order_by(ChatMessage.created_at.desc()).first()
+
+        member = db.query(ChatRoomMember).filter(
+            ChatRoomMember.room_id == room.id,
+            ChatRoomMember.user_id == current_user.id
+        ).first()
+
+        unread_count = db.query(ChatMessage).filter(
+            ChatMessage.room_id == room.id,
+            ChatMessage.id > (member.last_read_id or 0)
+        ).count()
+
+        result.append({
+            "id": room.id,
+            "name": room.name,
+            "type": room.type,
+            "last_message": last_msg.content[:50] if last_msg else None,
+            "unread_count": unread_count,
+            "updated_at": room.updated_at
+        })
+
+    return result
+
+@app.get("/api/chat/rooms/{room_id}/messages")
+async def get_messages(
+    room_id: str,
+    before: Optional[int] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(403, "채팅방 접근 권한 없음")
+
+    query = db.query(ChatMessage).options(
+        joinedload(ChatMessage.user),
+        joinedload(ChatMessage.read_receipts)
+    ).filter(ChatMessage.room_id == room_id)
+
+    if before:
+        query = query.filter(ChatMessage.id < before)
+
+    messages = query.order_by(ChatMessage.created_at.desc()).limit(limit).all()
+    messages.reverse()
+
+    result = []
+    for msg in messages:
+        read_by = [r.user_id for r in msg.read_receipts]
+        result.append({
+            "id": msg.id,
+            "room_id": msg.room_id,
+            "user_id": msg.user_id,
+            "user_name": msg.user.name,
+            "content": msg.content,
+            "type": msg.type,
+            "file_id": msg.file_id,
+            "created_at": msg.created_at.isoformat(),
+            "read_by": read_by
+        })
+
+    return result
+
+@app.post("/api/chat/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    room_id: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(403, "권한 없음")
+
+    if file.size and file.size > 5 * 1024 * 1024:
+        raise HTTPException(400, "파일 크기 초과 (최대 5MB)")
+
+    if not validate_mime_type(file.content_type):
+        raise HTTPException(400, "지원하지 않는 파일 형식")
+
+    file_id = str(uuid.uuid4())
+    file_path = await save_chat_file(file, room_id, file_id)
+
+    thumbnail_path = None
+    if file.content_type.startswith('image/'):
+        thumbnail_path = await create_thumbnail(file_path, room_id, file_id)
+
+    chat_file = ChatFile(
+        id=file_id,
+        message_id=None,
+        filename=file.filename,
+        mime_type=file.content_type,
+        size=file.size,
+        path=file_path,
+        thumbnail_path=thumbnail_path
+    )
+    db.add(chat_file)
+    db.commit()
+
+    return {"file_id": file_id, "filename": file.filename, "thumbnail": thumbnail_path}
+
+@app.get("/api/chat/files/{file_id}")
+async def download_file(
+    file_id: str,
+    thumbnail: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    chat_file = db.query(ChatFile).filter(ChatFile.id == file_id).first()
+    if not chat_file:
+        raise HTTPException(404, "파일 없음")
+
+    if chat_file.message_id:
+        message = db.query(ChatMessage).filter(ChatMessage.id == chat_file.message_id).first()
+        if message:
+            member = db.query(ChatRoomMember).filter(
+                ChatRoomMember.room_id == message.room_id,
+                ChatRoomMember.user_id == current_user.id
+            ).first()
+            if not member:
+                raise HTTPException(403, "권한 없음")
+
+    file_path = chat_file.thumbnail_path if thumbnail else chat_file.path
+    if not os.path.exists(file_path):
+        raise HTTPException(404, "파일 없음")
+
+    return FileResponse(file_path, media_type=chat_file.mime_type, filename=chat_file.filename)
+
+@app.get("/api/chat/sync")
+async def sync_messages(
+    last_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    room_ids = db.query(ChatRoomMember.room_id).filter(
+        ChatRoomMember.user_id == current_user.id
+    ).all()
+    room_ids = [r[0] for r in room_ids]
+
+    messages = db.query(ChatMessage).options(
+        joinedload(ChatMessage.user),
+        joinedload(ChatMessage.read_receipts)
+    ).filter(
+        ChatMessage.room_id.in_(room_ids),
+        ChatMessage.id > last_id
+    ).order_by(ChatMessage.created_at).all()
+
+    result = []
+    for msg in messages:
+        read_by = [r.user_id for r in msg.read_receipts]
+        result.append({
+            "id": msg.id,
+            "room_id": msg.room_id,
+            "user_id": msg.user_id,
+            "user_name": msg.user.name,
+            "content": msg.content,
+            "type": msg.type,
+            "file_id": msg.file_id,
+            "created_at": msg.created_at.isoformat(),
+            "read_by": read_by
+        })
+
+    return result
+
+@app.post("/api/chat/read")
+async def mark_as_read(
+    read_data: ChatReadRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    member = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == read_data.room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(403, "권한 없음")
+
+    max_id = max(read_data.message_ids)
+    if not member.last_read_id or max_id > member.last_read_id:
+        member.last_read_id = max_id
+
+    for msg_id in read_data.message_ids:
+        existing = db.query(ChatReadReceipt).filter(
+            ChatReadReceipt.message_id == msg_id,
+            ChatReadReceipt.user_id == current_user.id
+        ).first()
+        if not existing:
+            db.add(ChatReadReceipt(message_id=msg_id, user_id=current_user.id))
+
+    db.commit()
+
+    await chat_manager.broadcast_read_receipt(read_data.room_id, {
+        "user_id": current_user.id,
+        "message_ids": read_data.message_ids
+    })
+
+    return {"success": True}
+
+@app.get("/api/chat/search")
+async def search_messages(
+    q: str,
+    room_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    room_ids = db.query(ChatRoomMember.room_id).filter(
+        ChatRoomMember.user_id == current_user.id
+    ).all()
+    room_ids = [r[0] for r in room_ids]
+
+    query = db.query(ChatMessage).options(
+        joinedload(ChatMessage.user)
+    ).filter(
+        ChatMessage.room_id.in_(room_ids),
+        ChatMessage.content.contains(q)
+    )
+
+    if room_id:
+        query = query.filter(ChatMessage.room_id == room_id)
+
+    messages = query.order_by(ChatMessage.created_at.desc()).limit(100).all()
+
+    result = []
+    for msg in messages:
+        result.append({
+            "id": msg.id,
+            "room_id": msg.room_id,
+            "user_id": msg.user_id,
+            "user_name": msg.user.name,
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat()
+        })
+
+    return result
 
 if __name__ == "__main__":
     cert_file = os.path.join(os.path.dirname(__file__), "certs", "cert.pem")
