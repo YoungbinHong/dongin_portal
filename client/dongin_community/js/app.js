@@ -432,8 +432,14 @@ async function submitPost() {
     delete form.dataset.editMode;
     delete form.dataset.editId;
 
-    showView(editMode ? 'detail' : 'list');
-    if (editMode) renderPostDetail();
+    if (editMode) {
+        showView('detail');
+        renderPostDetail();
+    } else {
+        currentPage = 1;
+        await fetchPosts(1);
+        showView('list');
+    }
 }
 
 function openSettings() {
