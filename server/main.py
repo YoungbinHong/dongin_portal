@@ -259,6 +259,32 @@ async def download_page():
     file_size = os.path.getsize(file_path)
     file_size_mb = file_size / (1024 * 1024)
 
+    # 패치노트 읽기
+    patch_notes = ""
+    try:
+        yml_path = os.path.join(UPDATES_DIR, "latest.yml")
+        with open(yml_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            in_patch_notes = False
+            for i, line in enumerate(lines):
+                if line.startswith("patch_notes:"):
+                    in_patch_notes = True
+                    continue
+                if in_patch_notes:
+                    if line.startswith(" ") or line.startswith("\t"):
+                        patch_notes += line.lstrip()
+                    else:
+                        break
+    except Exception as e:
+        logger.error(f"[패치노트 로드 실패] {e}")
+
+    patch_notes_html = ""
+    patch_notes_card = ""
+    if patch_notes:
+        patch_notes_lines = patch_notes.strip().split("\n")
+        patch_notes_html = "<br>".join(patch_notes_lines)
+        patch_notes_card = f'<div class="container"><div class="patch-notes"><h3>📝 패치노트</h3>{patch_notes_html}</div></div>'
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -267,7 +293,7 @@ async def download_page():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>DONGIN PORTAL 다운로드</title>
         <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            * {{ margin: 0; padding: 0; box-sizing: border-box; user-select: none; }}
             body {{
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -276,6 +302,7 @@ async def download_page():
                 justify-content: center;
                 align-items: center;
                 padding: 20px;
+                gap: 20px;
             }}
             .container {{
                 background: white;
@@ -285,6 +312,9 @@ async def download_page():
                 text-align: center;
                 max-width: 500px;
                 width: 100%;
+                height: 600px;
+                display: flex;
+                flex-direction: column;
             }}
             h1 {{
                 color: #333;
@@ -336,6 +366,24 @@ async def download_page():
                 font-size: 16px;
                 margin-bottom: 10px;
             }}
+            .patch-notes {{
+                background: #e8f5e9;
+                border: 1px solid #4caf50;
+                border-radius: 10px;
+                padding: 20px;
+                margin-top: 30px;
+                text-align: left;
+                font-size: 14px;
+                color: #2e7d32;
+                line-height: 1.6;
+                max-height: 400px;
+                overflow-y: auto;
+            }}
+            .patch-notes h3 {{
+                color: #2e7d32;
+                font-size: 16px;
+                margin-bottom: 10px;
+            }}
         </style>
     </head>
     <body>
@@ -346,7 +394,10 @@ async def download_page():
             <a href="/updates/{path_val}" class="download-btn">다운로드</a>
 
             <div class="notice">
-                <h3>⚠️ Edge 브라우저 사용 시</h3>
+                <h3>⚠️ Chrome 브라우저 사용 시</h3>
+                <p>다운로드가 차단되면 <strong>"계속"</strong> 클릭</p>
+
+                <h3 style="margin-top: 15px;">⚠️ Edge 브라우저 사용 시</h3>
                 <p>다운로드가 차단되면 다음 순서로 진행:</p>
                 <p>
                     <strong>1)</strong> 다운로드 바에서 <strong>"..."</strong> 클릭<br>
@@ -354,11 +405,10 @@ async def download_page():
                     <strong>3)</strong> 아래 <strong>"∨"</strong> 클릭<br>
                     <strong>4)</strong> <strong>"그래도 계속"</strong> 클릭
                 </p>
-                <p style="margin-top: 10px; font-size: 12px; color: #999;">
-                    ※ 회사 내부 서버라 안전합니다
-                </p>
             </div>
         </div>
+
+        {patch_notes_card}
     </body>
     </html>
     """

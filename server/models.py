@@ -67,7 +67,7 @@ class Inventory(Base):
 class ChatRoom(Base):
     __tablename__ = "chat_rooms"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     type = Column(String(10), default="group", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -79,7 +79,7 @@ class ChatRoom(Base):
 class ChatRoomMember(Base):
     __tablename__ = "chat_room_members"
 
-    room_id = Column(String(36), ForeignKey("chat_rooms.id", ondelete="CASCADE"), primary_key=True)
+    room_id = Column(Integer, ForeignKey("chat_rooms.id", ondelete="CASCADE"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     last_read_id = Column(BigInteger, nullable=True)
@@ -91,7 +91,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    room_id = Column(String(36), ForeignKey("chat_rooms.id", ondelete="CASCADE"), nullable=False, index=True)
+    room_id = Column(Integer, ForeignKey("chat_rooms.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=True)
     type = Column(String(10), default="text", nullable=False)
