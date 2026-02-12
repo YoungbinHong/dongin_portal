@@ -1,4 +1,4 @@
-function initTitleBar() {
+async function initTitleBar() {
     if (document.querySelector('.titlebar')) {
         return;
     }
@@ -8,13 +8,15 @@ function initTitleBar() {
     const logoPath = isSubdir ? '../assets/images/logo.png' : 'assets/images/logo.png';
     console.log('Titlebar - pathname:', pathname, 'isSubdir:', isSubdir, 'logoPath:', logoPath);
 
+    const version = window.api && window.api.getAppVersion ? await window.api.getAppVersion() : '0.0.0';
+
     const titlebar = document.createElement('div');
     titlebar.className = 'titlebar';
     titlebar.innerHTML = `
         <div class="titlebar-left">
             <div class="titlebar-logo">
                 <img src="${logoPath}" alt="Logo">
-                <span>DONGIN PORTAL v0.1.1</span>
+                <span>DONGIN PORTAL v${version}</span>
             </div>
             <div class="titlebar-title" id="titlebarTitle"></div>
         </div>

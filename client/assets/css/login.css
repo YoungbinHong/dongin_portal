@@ -540,6 +540,10 @@ body.dark-theme .setting-group select {
     margin-bottom: 6px;
 }
 
+#otpGroup {
+    margin-bottom: 20px;
+}
+
 .form-group label {
     display: block;
     font-size: 13px;
