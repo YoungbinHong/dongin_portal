@@ -16,7 +16,7 @@ updater/package-lock.json
 
 # Build outputs
 client/dist/
-server/updates/*.exe
+server/updates/
 
 # Database
 *.db
