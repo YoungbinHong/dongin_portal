@@ -125,3 +125,17 @@ def get_user_logger(username: str):
 
 # 시스템 로거 초기화
 logger = setup_logger()
+
+# uvicorn 로거 커스터마이징
+uvicorn_logger = logging.getLogger("uvicorn")
+uvicorn_logger.handlers.clear()
+uvicorn_logger.setLevel(logging.CRITICAL)
+uvicorn_logger.propagate = False
+
+uvicorn_access = logging.getLogger("uvicorn.access")
+uvicorn_access.handlers.clear()
+uvicorn_access.disabled = True
+
+uvicorn_error = logging.getLogger("uvicorn.error")
+uvicorn_error.handlers.clear()
+uvicorn_error.setLevel(logging.CRITICAL)

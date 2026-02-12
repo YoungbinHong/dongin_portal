@@ -11,6 +11,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    command: postgres -c log_statement=none -c log_min_duration_statement=-1 -c log_checkpoints=off
+    logging:
+      driver: "none"
 
   app:
     build: .
@@ -26,7 +29,7 @@ services:
     volumes:
       - .:/app
       - ./logs:/app/logs
-    command: uvicorn main:app --host 0.0.0.0 --reload --no-access-log
+    command: python main.py
 
 volumes:
   postgres_data:

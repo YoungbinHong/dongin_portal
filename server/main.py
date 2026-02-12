@@ -343,7 +343,7 @@ async def download_page():
             <h1>DONGIN PORTAL</h1>
             <div class="version">버전 {version}</div>
             <div class="info">파일 크기: {file_size_mb:.1f} MB</div>
-            <a href="/updates/DONGIN PORTAL_v0.1.1_Setup.exe" class="download-btn">다운로드</a>
+            <a href="/updates/{path_val}" class="download-btn">다운로드</a>
 
             <div class="notice">
                 <h3>⚠️ Edge 브라우저 사용 시</h3>
@@ -801,7 +801,7 @@ async def heartbeat(
     count = len(online_users)
 
     if _last_online_count is not None and _last_online_count != count:
-        logger.info(f"[접속자 변경] {_last_online_count}명 → {count}명")
+        logger.info(f"[접속자 수 변경] {_last_online_count}명 → {count}명")
 
     _last_online_count = count
 
@@ -1539,6 +1539,13 @@ async def search_messages(
     return result
 
 if __name__ == "__main__":
+    import logging
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_logger.handlers.clear()
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    uvicorn_access.handlers.clear()
+    uvicorn_access.disabled = True
+
     cert_file = os.path.join(os.path.dirname(__file__), "certs", "cert.pem")
     key_file = os.path.join(os.path.dirname(__file__), "certs", "key.pem")
 
@@ -1550,7 +1557,7 @@ if __name__ == "__main__":
             port=8000,
             workers=1,
             limit_concurrency=400,
-            log_level="info",
+            log_level="critical",
             ssl_keyfile=key_file,
             ssl_certfile=cert_file
         )
@@ -1563,5 +1570,5 @@ if __name__ == "__main__":
             port=8000,
             workers=1,
             limit_concurrency=400,
-            log_level="info"
+            log_level="critical"
         )
