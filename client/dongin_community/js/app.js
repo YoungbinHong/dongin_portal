@@ -4,6 +4,10 @@ let posts = [];
 let currentFilter = 'all';
 let currentView = 'list';
 let currentPost = null;
+let currentPage = 1;
+const POSTS_PER_PAGE = 8;
+let totalPosts = 0;
+let scrollPosition = 0;
 
 function getToken() {
     return localStorage.getItem('access_token');
@@ -47,6 +51,7 @@ function applyTheme(theme) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     loadSavedTheme();
+    await loadUserInfo();
     setTimeout(() => {
         document.querySelector('.sidebar').classList.add('show');
         document.querySelector('.main-container').classList.add('show');
@@ -55,14 +60,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     logEvent('커뮤니티 진입');
 });
 
-async function fetchPosts() {
+async function loadUserInfo() {
     try {
-        const res = await fetch(`${API_BASE}/api/posts`, { headers: authHeaders() });
+        const res = await fetch(`${API_BASE}/api/users/me`, { headers: authHeaders() });
         if (res.ok) {
-            posts = await res.json();
+            const user = await res.json();
+            localStorage.setItem('username', user.username);
+            localStorage.setItem('userName', user.name);
+            localStorage.setItem('userRole', user.role);
+        }
+    } catch {}
+}
+
+async function fetchPosts(page = 1) {
+    try {
+        const skip = (page - 1) * POSTS_PER_PAGE;
+        const res = await fetch(
+            `${API_BASE}/api/posts?skip=${skip}&limit=${POSTS_PER_PAGE}`,
+            { headers: authHeaders() }
+        );
+        if (res.ok) {
+            const data = await res.json();
+            posts = data.posts;
+            totalPosts = data.total;
+            currentPage = page;
         }
     } catch {}
     renderPostList();
+    renderPagination();
+}
+
+function renderPagination() {
+    const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
+    if (totalPages <= 1) {
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+
+    let html = '<div class="pagination">';
+
+    if (currentPage > 1) {
+        html += `<button class="page-btn" onclick="fetchPosts(${currentPage - 1})">‹</button>`;
+    }
+
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === currentPage ? 'active' : '';
+        html += `<button class="page-btn ${active}" onclick="fetchPosts(${i})">${i}</button>`;
+    }
+
+    if (currentPage < totalPages) {
+        html += `<button class="page-btn" onclick="fetchPosts(${currentPage + 1})">›</button>`;
+    }
+
+    html += '</div>';
+    document.getElementById('pagination').innerHTML = html;
 }
 
 function filterCategory(category) {
@@ -81,8 +135,9 @@ function filterCategory(category) {
         currentFilter = 'all';
     }
 
+    currentPage = 1;
     showView('list');
-    renderPostList();
+    fetchPosts(1);
 }
 
 function setCategoryFilter(category) {
@@ -92,7 +147,8 @@ function setCategoryFilter(category) {
     event.target.classList.add('active');
 
     currentFilter = category;
-    renderPostList();
+    currentPage = 1;
+    fetchPosts(1);
 }
 
 function renderPostList() {
@@ -148,6 +204,8 @@ function getCategoryName(category) {
 }
 
 async function viewPost(id) {
+    scrollPosition = document.querySelector('.content')?.scrollTop || 0;
+
     try {
         const res = await fetch(`${API_BASE}/api/posts/${id}`, { headers: authHeaders() });
         if (!res.ok) return;
@@ -168,6 +226,12 @@ function renderPostDetail() {
     const postDetail = document.getElementById('postDetail');
     const isLiked = localStorage.getItem(`post_${currentPost.id}_liked`) === 'true';
 
+    const username = localStorage.getItem('username') || '';
+    const userRole = localStorage.getItem('userRole') || 'user';
+    const isAuthor = currentPost.author_username === username;
+    const isAdmin = userRole === 'admin';
+    const canDelete = isAuthor || isAdmin;
+
     postDetail.innerHTML = `
         <div class="detail-header">
             <div class="post-category cat-${currentPost.category}">${getCategoryName(currentPost.category)}</div>
@@ -186,6 +250,16 @@ function renderPostDetail() {
                 </svg>
                 목록
             </button>
+            ${isAuthor ? `
+                <button class="action-btn edit-btn" onclick="editPost(${currentPost.id})">
+                    ✏️ 수정
+                </button>
+            ` : ''}
+            ${canDelete ? `
+                <button class="action-btn delete-btn" onclick="deletePost(${currentPost.id})">
+                    🗑️ 삭제
+                </button>
+            ` : ''}
             <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike(${currentPost.id})">
                 ❤️ 좋아요 ${currentPost.likes}
             </button>
@@ -265,13 +339,51 @@ function showView(viewName) {
     if (viewName === 'list') {
         document.getElementById('listView').classList.add('active');
         renderPostList();
+        setTimeout(() => {
+            const content = document.querySelector('.content');
+            if (content) content.scrollTop = scrollPosition;
+        }, 0);
     } else if (viewName === 'detail') {
         document.getElementById('detailView').classList.add('active');
     } else if (viewName === 'write') {
         document.getElementById('writeView').classList.add('active');
-        document.getElementById('postTitle').value = '';
-        document.getElementById('postCategory').value = 'general';
-        document.getElementById('postContent').value = '';
+        const form = document.querySelector('.write-form');
+        if (form.dataset.editMode !== 'true') {
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postCategory').value = 'general';
+            document.getElementById('postContent').value = '';
+        }
+    }
+}
+
+function editPost(postId) {
+    showView('write');
+    document.getElementById('postTitle').value = currentPost.title;
+    document.getElementById('postCategory').value = currentPost.category;
+    document.getElementById('postContent').value = currentPost.content;
+
+    const form = document.querySelector('.write-form');
+    form.dataset.editMode = 'true';
+    form.dataset.editId = postId;
+}
+
+async function deletePost(postId) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/posts/${postId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        if (res.ok) {
+            posts = posts.filter(p => p.id !== postId);
+            showView('list');
+            logEvent(`게시글 삭제: ${currentPost.title}`);
+        } else {
+            alert('삭제 권한이 없습니다');
+        }
+    } catch {
+        alert('삭제 실패');
     }
 }
 
@@ -285,20 +397,43 @@ async function submitPost() {
         return;
     }
 
+    const form = document.querySelector('.write-form');
+    const editMode = form.dataset.editMode === 'true';
+    const editId = form.dataset.editId;
+
     try {
-        const res = await fetch(`${API_BASE}/api/posts`, {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({ title, category, content })
-        });
-        if (res.ok) {
-            const newPost = await res.json();
-            posts.unshift(newPost);
+        if (editMode) {
+            const res = await fetch(`${API_BASE}/api/posts/${editId}`, {
+                method: 'PUT',
+                headers: authHeaders(),
+                body: JSON.stringify({ title, category, content })
+            });
+            if (res.ok) {
+                const updatedPost = await res.json();
+                const idx = posts.findIndex(p => p.id === parseInt(editId));
+                if (idx !== -1) posts[idx] = updatedPost;
+                currentPost = updatedPost;
+                logEvent(`게시글 수정: ${title}`);
+            }
+        } else {
+            const res = await fetch(`${API_BASE}/api/posts`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ title, category, content })
+            });
+            if (res.ok) {
+                const newPost = await res.json();
+                posts.unshift(newPost);
+                logEvent(`게시글 작성: ${title}`);
+            }
         }
     } catch {}
 
-    showView('list');
-    logEvent(`게시글 작성: ${title}`);
+    delete form.dataset.editMode;
+    delete form.dataset.editId;
+
+    showView(editMode ? 'detail' : 'list');
+    if (editMode) renderPostDetail();
 }
 
 function openSettings() {
