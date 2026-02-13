@@ -1,20 +1,24 @@
 const API_BASE = 'http://192.168.0.254:8000';
 
-let chatIdCounter = 1;
-let currentChatId = '1';
+let chatIdCounter = 0;
+let currentChatId = 'local_1';
 let chats = {
-    '1': { title: '새 대화', messages: [] }
+    'local_1': { title: '새 대화', messages: [] }
 };
 let currentUser = null;
 
 function createNewChat() {
     chatIdCounter++;
-    const newId = String(chatIdCounter);
+    const newId = `local_${chatIdCounter}`;
     chats[newId] = { title: '새 대화', messages: [] };
     currentChatId = newId;
     renderChatHistory();
     clearMessages();
-    document.getElementById('welcomeScreen').classList.remove('hidden');
+    const ws = document.getElementById('welcomeScreen');
+    ws.classList.remove('hidden');
+    ws.style.animation = 'none';
+    ws.offsetHeight;
+    ws.style.animation = '';
     document.getElementById('messageInput').focus();
     saveChats();
 }
@@ -25,22 +29,62 @@ function selectChat(chatId) {
     renderMessages();
 }
 
+let pendingDeleteChatId = null;
+
 function deleteChat(event, chatId) {
     event.stopPropagation();
+    if (chatId.startsWith('local_')) {
+        delete chats[chatId];
+        if (currentChatId === chatId) {
+            const remaining = Object.keys(chats);
+            if (remaining.length > 0) {
+                currentChatId = remaining[0];
+            } else {
+                chatIdCounter++;
+                currentChatId = `local_${chatIdCounter}`;
+                chats[currentChatId] = { title: '새 대화', messages: [] };
+            }
+        }
+        renderChatHistory();
+        renderMessages();
+        return;
+    }
+    pendingDeleteChatId = chatId;
+    document.querySelectorAll('.alert-modal, .settings-modal').forEach(el => el.style.display = 'none');
+    document.getElementById('deleteChatContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+async function confirmDeleteChat() {
+    const chatId = pendingDeleteChatId;
+    pendingDeleteChatId = null;
+    closeModal();
+    try {
+        const token = localStorage.getItem('access_token');
+        await fetch(`${API_BASE}/api/ai/chat/history/${chatId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (e) {
+        console.error('대화 삭제 실패:', e);
+    }
     delete chats[chatId];
-    if (Object.keys(chats).length === 0) {
-        createNewChat();
-    } else if (currentChatId === chatId) {
-        currentChatId = Object.keys(chats)[0];
+    if (currentChatId === chatId) {
+        const remaining = Object.keys(chats);
+        currentChatId = remaining.length > 0 ? remaining[0] : null;
+        if (!currentChatId) {
+            chatIdCounter++;
+            currentChatId = `local_${chatIdCounter}`;
+            chats[currentChatId] = { title: '새 대화', messages: [] };
+        }
     }
     renderChatHistory();
     renderMessages();
-    saveChats();
 }
 
 function renderChatHistory() {
     const container = document.getElementById('chatHistory');
-    const ids = Object.keys(chats).reverse();
+    const ids = Object.keys(chats);
     let html = '<div class="history-section"><div class="history-label">대화 목록</div>';
     ids.forEach(id => {
         const chat = chats[id];
@@ -164,6 +208,11 @@ function createStreamingMessageEl() {
 function showQueueStatus(position) {
     const streamEl = document.getElementById('streamingContent');
     if (!streamEl) return;
+    const posEl = streamEl.querySelector('.queue-position');
+    if (posEl) {
+        posEl.textContent = position;
+        return;
+    }
     streamEl.innerHTML = `
         <div class="queue-indicator">
             <div class="queue-spinner"></div>
@@ -254,13 +303,14 @@ async function sendMessage() {
         console.log('[AI] fetch 시작, token:', token ? '있음' : '없음');
 
         abortController = new AbortController();
+        const sessionId = currentChatId.startsWith('local_') ? null : currentChatId;
         const res = await fetch(`${API_BASE}/api/ai/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ message: content, history }),
+            body: JSON.stringify({ message: content, history, session_id: sessionId }),
             signal: abortController.signal
         });
 
@@ -295,6 +345,12 @@ async function sendMessage() {
                     if (data.type === 'processing') {
                         showProcessingStatus();
                         continue;
+                    }
+                    if (data.session_id && currentChatId.startsWith('local_')) {
+                        const oldId = currentChatId;
+                        currentChatId = data.session_id;
+                        chats[currentChatId] = chats[oldId];
+                        delete chats[oldId];
                     }
                     if (data.content) {
                         fullResponse += data.content;
@@ -333,6 +389,8 @@ async function sendMessage() {
     isStreaming = false;
     abortController = null;
     toggleSendButton(false);
+    await loadChats();
+    renderChatHistory();
 }
 
 function useSuggestion(text) {
@@ -371,7 +429,7 @@ async function loadUser() {
         }
 
         currentUser = await res.json();
-        loadChats();
+        await loadChats();
         renderChatHistory();
         renderMessages();
         messageInput.focus();
@@ -382,29 +440,46 @@ async function loadUser() {
 }
 
 function saveChats() {
-    if (!currentUser) return;
-    const storageKey = `ai_chats_${currentUser.username}`;
-    localStorage.setItem(storageKey, JSON.stringify({
-        chatIdCounter,
-        currentChatId,
-        chats
-    }));
 }
 
-function loadChats() {
+async function loadChats() {
     if (!currentUser) return;
-    const storageKey = `ai_chats_${currentUser.username}`;
-    const saved = localStorage.getItem(storageKey);
-
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            chatIdCounter = data.chatIdCounter || 1;
-            currentChatId = data.currentChatId || '1';
-            chats = data.chats || { '1': { title: '새 대화', messages: [] } };
-        } catch (e) {
-            console.error('대화 기록 로드 실패:', e);
+    try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch(`${API_BASE}/api/ai/chat/history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        const list = await res.json();
+        if (!list || list.length === 0) {
+            chatIdCounter++;
+            currentChatId = `local_${chatIdCounter}`;
+            chats = { [currentChatId]: { title: '새 대화', messages: [] } };
+            return;
         }
+        const localOnly = {};
+        Object.entries(chats).forEach(([id, chat]) => {
+            if (id.startsWith('local_') && chat.messages.length > 0) localOnly[id] = chat;
+        });
+        chats = {};
+        list.forEach(session => {
+            chats[session.session_id] = {
+                title: session.title || '새 대화',
+                messages: session.messages.map(m => ({
+                    role: m.role === 'assistant' ? 'ai' : m.role,
+                    content: m.content
+                }))
+            };
+        });
+        Object.assign(chats, localOnly);
+        if (!chats[currentChatId]) {
+            currentChatId = list[0].session_id;
+        }
+    } catch (e) {
+        console.error('대화 기록 로드 실패:', e);
+        chatIdCounter++;
+        currentChatId = `local_${chatIdCounter}`;
+        chats = { [currentChatId]: { title: '새 대화', messages: [] } };
     }
 }
 

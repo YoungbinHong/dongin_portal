@@ -1,6 +1,8 @@
 {
   "name": "dongin-portal-updater",
   "version": "1.0.0",
+  "description": "DONGIN PORTAL 자동 업데이트 유틸리티",
+  "author": "ybhong1995",
   "main": "main.js",
   "scripts": {
     "build": "electron-builder --win --x64"
@@ -14,7 +16,7 @@
     "productName": "DONGIN PORTAL Updater",
     "win": {
       "target": "portable",
-      "icon": "../client/icon.ico"
+      "icon": "../client/build/icon.png"
     },
     "portable": {
       "artifactName": "updater.exe"

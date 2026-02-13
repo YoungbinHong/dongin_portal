@@ -324,6 +324,13 @@ ipcMain.handle('set-auto-start', (event, enabled) => {
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
+ipcMain.handle('get-resource-path', (_, filename) => {
+    if (!app.isPackaged) {
+        return null;
+    }
+    return path.join(process.resourcesPath, filename);
+});
+
 ipcMain.handle('check-update', (event, baseUrl, version) => {
     const url = (baseUrl || '').replace(/\/$/, '') + '/api/update/check?version=' + encodeURIComponent(version || '0.0.0');
     const protocol = url.startsWith('https') ? https : http;

@@ -5,7 +5,15 @@ async function initTitleBar() {
 
     const pathname = window.location.pathname;
     const isSubdir = /\/client\/dongin_[^\/]+\//.test(pathname);
-    const logoPath = isSubdir ? '../assets/images/logo.png' : 'assets/images/logo.png';
+    let logoPath;
+
+    if (window.api && window.api.getResourcePath) {
+        const resourcePath = await window.api.getResourcePath('logo.png');
+        logoPath = resourcePath || (isSubdir ? '../assets/images/logo.png' : 'assets/images/logo.png');
+    } else {
+        logoPath = isSubdir ? '../assets/images/logo.png' : 'assets/images/logo.png';
+    }
+
     console.log('Titlebar - pathname:', pathname, 'isSubdir:', isSubdir, 'logoPath:', logoPath);
 
     const version = window.api && window.api.getAppVersion ? await window.api.getAppVersion() : '0.0.0';

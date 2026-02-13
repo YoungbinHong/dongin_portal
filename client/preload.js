@@ -70,5 +70,7 @@ contextBridge.exposeInMainWorld('api', {
     showNotification: (title, body, roomId) => ipcRenderer.invoke('show-notification', { title, body, roomId }),
     onSelectRoom: (callback) => ipcRenderer.on('select-room', (_, roomId) => callback(roomId)),
     uploadFile: (roomId, filePath) => ipcRenderer.invoke('upload-file', { roomId, filePath }),
-    downloadFile: (url, savePath) => ipcRenderer.invoke('download-file', { url, savePath })
+    downloadFile: (url, savePath) => ipcRenderer.invoke('download-file', { url, savePath }),
+
+    getResourcePath: (filename) => ipcRenderer.invoke('get-resource-path', filename)
 });

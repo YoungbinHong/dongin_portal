@@ -1,6 +1,8 @@
 {
   "name": "dongin-portal",
   "version": "0.1.2",
+  "description": "DONGIN PORTAL 데스크톱 애플리케이션",
+  "author": "ybhong1995",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -29,15 +31,12 @@
         "arch": [
           "x64"
         ]
-      },
-      "icon": "assets/images/logo.png"
+      }
     },
     "nsis": {
       "artifactName": "${productName}_v${version}_Setup.exe",
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "differentialPackage": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "installerSidebar": "assets/images/logo.png"
@@ -46,6 +45,10 @@
       {
         "from": "../updater/dist/updater.exe",
         "to": "updater.exe"
+      },
+      {
+        "from": "assets/images/logo.png",
+        "to": "logo.png"
       }
     ],
     "publish": {
