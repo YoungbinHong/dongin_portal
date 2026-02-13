@@ -44,16 +44,23 @@ const toolConfig = {
         btnText: 'PDF 병합하기',
         multiFile: true
     },
-    unlock: {
-        title: '비밀번호 해제',
-        desc: '암호화된 PDF의 비밀번호를 해제합니다 (6자리까지)',
-        btnText: '비밀번호 해제',
+    imageToPdf: {
+        title: 'IMAGE TO PDF',
+        desc: '이미지 파일(PNG, JPG)을 PDF로 변환합니다',
+        btnText: '변환하기',
+        multiFile: true
+    },
+    pdfToImage: {
+        title: 'PDF TO IMAGE',
+        desc: 'PDF의 모든 페이지를 이미지로 추출합니다',
+        btnText: '추출하기',
         multiFile: false
     }
 };
 
 window.selectTool = selectTool;
 window.selectFilesWithDialog = selectFilesWithDialog;
+window.selectImageFilesWithDialog = selectImageFilesWithDialog;
 window.handleFileSelect = handleFileSelect;
 window.removeFile = removeFile;
 window.removeCompressFile = removeCompressFile;
@@ -238,6 +245,54 @@ async function selectFilesWithDialog(tool) {
     }
 }
 
+async function selectImageFilesWithDialog() {
+    const options = {
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
+        properties: ['openFile', 'multiSelections']
+    };
+
+    const { filePaths, canceled } = await window.api.showOpenDialog(options);
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+        return;
+    }
+
+    for (const filePath of filePaths) {
+        const result = await window.api.readFile(filePath);
+        if (!result.success) {
+            showAlert('오류', result.error);
+            continue;
+        }
+
+        const base64 = result.data;
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const arrayBuffer = bytes.buffer;
+
+        const fileName = await window.api.getBasename(filePath);
+        const stat = await window.api.getFileStat(filePath);
+
+        const ext = fileName.toLowerCase();
+        let type = 'image/png';
+        if (ext.endsWith('.jpg') || ext.endsWith('.jpeg')) {
+            type = 'image/jpeg';
+        }
+
+        selectedFiles.push({
+            path: filePath,
+            name: fileName,
+            size: stat.size,
+            type: type,
+            arrayBuffer: () => Promise.resolve(arrayBuffer)
+        });
+    }
+
+    updateFileList();
+}
+
 function resetCompressState() {
     compressPdfDoc = null;
     compressCurrentPage = 1;
@@ -302,8 +357,10 @@ function setupFileSelectButton() {
     const selectBtn = document.querySelector('.select-btn');
     selectBtn.onclick = null;
     selectBtn.addEventListener('click', async () => {
-        if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'unlock') {
+        if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'pdfToImage') {
             await selectFilesWithDialog(currentTool);
+        } else if (currentTool === 'imageToPdf') {
+            await selectImageFilesWithDialog();
         } else {
             document.getElementById('fileInput').click();
         }
@@ -312,8 +369,10 @@ function setupFileSelectButton() {
     const addMoreBtn = document.querySelector('.add-more-btn');
     addMoreBtn.onclick = null;
     addMoreBtn.addEventListener('click', async () => {
-        if (currentTool === 'merge' || currentTool === 'unlock') {
+        if (currentTool === 'merge') {
             await selectFilesWithDialog(currentTool);
+        } else if (currentTool === 'imageToPdf') {
+            await selectImageFilesWithDialog();
         } else {
             document.getElementById('fileInput').click();
         }
@@ -360,11 +419,15 @@ function handleFileSelect(event) {
 
 function handleFiles(files) {
     if (files.length === 0) {
-        showAlert('알림', 'PDF 파일만 업로드할 수 있습니다.');
+        if (currentTool === 'imageToPdf') {
+            showAlert('알림', '이미지 파일(PNG, JPG)만 업로드할 수 있습니다.');
+        } else {
+            showAlert('알림', 'PDF 파일만 업로드할 수 있습니다.');
+        }
         return;
     }
 
-    if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'unlock') {
+    if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'pdfToImage') {
         showAlert('알림', '이 기능은 파일 선택 대화상자를 사용합니다.');
         return;
     }
@@ -620,15 +683,20 @@ function updateFileList() {
     document.getElementById('fileCount').textContent = `${selectedFiles.length}개의 파일`;
     document.getElementById('executeBtnText').textContent = toolConfig[currentTool].btnText;
 
+    const isDraggable = currentTool === 'merge' || currentTool === 'imageToPdf';
+    const iconSvg = currentTool === 'imageToPdf'
+        ? '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>'
+        : '<svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>';
+
     fileList.innerHTML = selectedFiles.map((file, index) => `
-        <div class="file-item" draggable="${currentTool === 'merge'}" data-index="${index}">
-            ${currentTool === 'merge' ? `
+        <div class="file-item" draggable="${isDraggable}" data-index="${index}">
+            ${isDraggable ? `
             <div class="file-item-drag-handle">
                 <svg viewBox="0 0 24 24"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2z"/></svg>
             </div>
             ` : ''}
             <div class="file-item-icon">
-                <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
+                ${iconSvg}
             </div>
             <div class="file-item-info">
                 <div class="file-item-name">${file.name}</div>
@@ -640,7 +708,7 @@ function updateFileList() {
         </div>
     `).join('');
 
-    if (currentTool === 'merge') {
+    if (isDraggable) {
         setupFileDragSort();
     }
 }
@@ -814,8 +882,10 @@ async function executeTask() {
             await executeSplit();
         } else if (currentTool === 'merge') {
             await executeMerge();
-        } else if (currentTool === 'unlock') {
-            await executeUnlock();
+        } else if (currentTool === 'imageToPdf') {
+            await executeImageToPdf();
+        } else if (currentTool === 'pdfToImage') {
+            await executePdfToImage();
         }
     } catch (e) {
         closeModal();
@@ -927,43 +997,109 @@ async function executeMerge() {
     }
 }
 
-async function executeUnlock() {
-    const file = selectedFiles[0];
-    const charset = document.querySelector('input[name="charset"]:checked').value;
-
+async function executeImageToPdf() {
     const { filePath, canceled } = await window.api.showSaveDialog({
-        defaultPath: file.name.replace('.pdf', '_unlocked.pdf'),
+        defaultPath: 'converted.pdf',
         filters: [{ name: 'PDF', extensions: ['pdf'] }]
     });
 
     if (canceled) return;
 
-    const bruteforceProgress = document.getElementById('bruteforceProgress');
-    bruteforceProgress.style.display = 'block';
-
-    window.api.onBruteforceProgress((data) => {
-        const percent = (data.tried / data.total * 100).toFixed(2);
-        document.getElementById('bruteforceBar').style.width = percent + '%';
-        document.getElementById('bruteforceText').textContent = `시도 중: ${data.tried.toLocaleString()} / ${data.total.toLocaleString()}`;
-    });
-
     showProgress();
-    document.getElementById('progressTitle').textContent = '비밀번호 해제 중...';
 
     try {
-        const result = await window.api.unlockPdfBruteforce(file.path, filePath, { maxLength: 6, charset });
+        const newPdf = await PDFDocument.create();
 
-        closeModal();
-        bruteforceProgress.style.display = 'none';
+        for (const file of selectedFiles) {
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            let image;
+            if (file.type === 'image/png') {
+                image = await newPdf.embedPng(uint8Array);
+            } else if (file.type === 'image/jpeg') {
+                image = await newPdf.embedJpg(uint8Array);
+            } else {
+                continue;
+            }
+
+            const page = newPdf.addPage([image.width, image.height]);
+            page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+        }
+
+        const pdfBytes = await newPdf.save();
+        let binaryString = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+            const chunk = pdfBytes.slice(i, i + chunkSize);
+            binaryString += String.fromCharCode(...chunk);
+        }
+        const base64 = btoa(binaryString);
+        const result = await window.api.saveCompressedPdf(filePath, base64);
+
+        await completeProgress();
 
         if (result.success) {
-            showAlert('성공', `비밀번호를 찾았습니다: ${result.password}`);
+            showAlert('완료', `${selectedFiles.length}개의 이미지가 PDF로 변환되었습니다.`);
         } else {
-            showAlert('실패', result.error);
+            showAlert('오류', result.error);
         }
     } catch (e) {
-        closeModal();
-        bruteforceProgress.style.display = 'none';
+        await completeProgress();
+        showAlert('오류', e.message);
+    }
+}
+
+async function executePdfToImage() {
+    const file = selectedFiles[0];
+
+    const { filePaths, canceled } = await window.api.showOpenDialog({
+        properties: ['openDirectory'],
+        title: '이미지를 저장할 폴더 선택'
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) return;
+
+    showProgress();
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const outputFolder = filePaths[0];
+        const baseName = file.name.replace('.pdf', '');
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 2.0 });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const arrayBuf = await blob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuf);
+
+            let binaryString = '';
+            const chunkSize = 8192;
+            for (let j = 0; j < uint8Array.length; j += chunkSize) {
+                const chunk = uint8Array.slice(j, j + chunkSize);
+                binaryString += String.fromCharCode(...chunk);
+            }
+            const base64 = btoa(binaryString);
+
+            const sep = outputFolder.includes('\\') ? '\\' : '/';
+            const imagePath = `${outputFolder}${sep}${baseName}_page_${i}.png`;
+            await window.api.saveCompressedPdf(imagePath, base64);
+        }
+
+        await completeProgress();
+        showAlert('완료', `${pdf.numPages}개의 이미지로 추출되었습니다.`);
+    } catch (e) {
+        await completeProgress();
         showAlert('오류', e.message);
     }
 }
@@ -1013,7 +1149,8 @@ function showComplete() {
         compress: `${selectedFiles.length}개의 PDF 파일이 압축되었습니다.`,
         split: 'PDF 파일이 분할되었습니다.',
         merge: `${selectedFiles.length}개의 PDF 파일이 병합되었습니다.`,
-        unlock: 'PDF 비밀번호가 해제되었습니다.'
+        imageToPdf: `${selectedFiles.length}개의 이미지가 PDF로 변환되었습니다.`,
+        pdfToImage: 'PDF가 이미지로 추출되었습니다.'
     };
 
     document.getElementById('completeMsg').textContent = messages[currentTool];

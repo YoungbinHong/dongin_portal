@@ -37,10 +37,13 @@
                 <svg viewBox="0 0 24 24"><path d="M17 20.41L18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z"/></svg>
                 <span>PDF 병합</span>
             </div>
-            <div class="menu-item disabled" data-tool="unlock" title="이 기능은 현재 준비 중입니다">
-                <svg viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>
-                <span>비밀번호 해제</span>
-                <span class="limit-badge">6자리</span>
+            <div class="menu-item" data-tool="imageToPdf" onclick="selectTool('imageToPdf')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>
+                <span>IMAGE TO PDF</span>
+            </div>
+            <div class="menu-item" data-tool="pdfToImage" onclick="selectTool('pdfToImage')">
+                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                <span>PDF TO IMAGE</span>
             </div>
         </div>
 
@@ -173,38 +176,14 @@
                     <p class="option-hint">파일을 드래그하여 순서를 변경할 수 있습니다</p>
                 </div>
 
-                <div id="unlockOptions" class="tool-options" style="display:none;">
-                    <div class="option-title">비밀번호 해제</div>
-                    <div class="unlock-notice">
-                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                        <span>6자리까지의 비밀번호만 해제할 수 있습니다</span>
-                    </div>
-                    <div class="option-group">
-                        <label class="option-card active" data-charset="numeric">
-                            <input type="radio" name="charset" value="numeric" checked>
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 8c0 1.11-.9 2-2 2h-2v2h4v2H9v-4c0-1.11.9-2 2-2h2V9H9V7h4c1.1 0 2 .89 2 2v2z"/></svg></div>
-                            <div class="option-name">숫자만</div>
-                            <div class="option-desc">0-9 (빠름)</div>
-                        </label>
-                        <label class="option-card" data-charset="alpha">
-                            <input type="radio" name="charset" value="alpha">
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg></div>
-                            <div class="option-name">영문만</div>
-                            <div class="option-desc">a-z, A-Z</div>
-                        </label>
-                        <label class="option-card" data-charset="alphanumeric">
-                            <input type="radio" name="charset" value="alphanumeric">
-                            <div class="option-icon"><svg viewBox="0 0 24 24"><path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/></svg></div>
-                            <div class="option-name">영문+숫자</div>
-                            <div class="option-desc">오래 걸림</div>
-                        </label>
-                    </div>
-                    <div class="bruteforce-progress" id="bruteforceProgress" style="display:none;">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" id="bruteforceBar"></div>
-                        </div>
-                        <div class="progress-text" id="bruteforceText">시도 중: 0 / 0</div>
-                    </div>
+                <div id="imageToPdfOptions" class="tool-options" style="display:none;">
+                    <div class="option-title">이미지를 PDF로 변환</div>
+                    <p class="option-hint">파일을 드래그하여 순서를 변경할 수 있습니다</p>
+                </div>
+
+                <div id="pdfToImageOptions" class="tool-options" style="display:none;">
+                    <div class="option-title">PDF를 이미지로 변환</div>
+                    <p class="option-hint">모든 페이지가 개별 이미지 파일로 저장됩니다</p>
                 </div>
             </div>
 
