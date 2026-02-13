@@ -233,18 +233,24 @@ function initEventListeners() {
         sendBtn.addEventListener('click', sendMessage);
     }
 
-    const fileBtn = document.querySelector('.input-btn[title="파일 첨부"]');
-    const fileInput = document.getElementById('fileInput');
-    if (fileBtn && fileInput) {
-        fileBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
-    }
-
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeSettings();
+            closeModal();
         }
     });
+
+    const fileBtn = document.querySelector('.input-btn[title="파일 첨부"]');
+    if (fileBtn) {
+        fileBtn.onclick = async () => {
+            if (!store.currentRoomId) return;
+            const result = await openFileBrowser({ mode: 'file', multiSelect: true });
+            if (!result.success) return;
+            for (const file of result.files) {
+                await uploadFileByPath(file.path, file.name, file.size);
+            }
+        };
+    }
 }
 
 function initStoreListeners() {
@@ -544,32 +550,70 @@ function showErrorModal(title, message) {
     }
 }
 
+let newChatEscHandler = null;
+let userSearchKeyIndex = -1;
+
 function openNewChatModal() {
     document.getElementById('newChatModal').style.display = 'flex';
     document.getElementById('userSearchInput').value = '';
     document.getElementById('userSearchResults').innerHTML = '';
+    userSearchKeyIndex = -1;
     document.getElementById('userSearchInput').focus();
+    searchUsers('');
+
+    if (newChatEscHandler) document.removeEventListener('keydown', newChatEscHandler);
+    newChatEscHandler = (e) => {
+        if (e.key === 'Escape') closeNewChatModal();
+    };
+    document.addEventListener('keydown', newChatEscHandler);
 
     const searchInput = document.getElementById('userSearchInput');
     if (searchInput && !searchInput.dataset.listenerAttached) {
         searchInput.dataset.listenerAttached = 'true';
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
-
+            userSearchKeyIndex = -1;
             if (searchTimeout) clearTimeout(searchTimeout);
-
-            if (query.length < 2) {
-                document.getElementById('userSearchResults').innerHTML = '';
-                return;
-            }
-
             searchTimeout = setTimeout(() => searchUsers(query), 300);
         });
+
+        searchInput.addEventListener('keydown', (e) => {
+            const items = document.querySelectorAll('#userSearchResults .user-item');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                userSearchKeyIndex = Math.min(userSearchKeyIndex + 1, items.length - 1);
+                updateUserSearchKeySelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                userSearchKeyIndex = Math.max(userSearchKeyIndex - 1, 0);
+                updateUserSearchKeySelection(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (userSearchKeyIndex >= 0 && items[userSearchKeyIndex]) {
+                    items[userSearchKeyIndex].click();
+                }
+            }
+        });
+    }
+}
+
+function updateUserSearchKeySelection(items) {
+    items.forEach((item, i) => {
+        item.classList.toggle('keyboard-selected', i === userSearchKeyIndex);
+    });
+    if (items[userSearchKeyIndex]) {
+        items[userSearchKeyIndex].scrollIntoView({ block: 'nearest' });
     }
 }
 
 function closeNewChatModal() {
     document.getElementById('newChatModal').style.display = 'none';
+    if (newChatEscHandler) {
+        document.removeEventListener('keydown', newChatEscHandler);
+        newChatEscHandler = null;
+    }
+    userSearchKeyIndex = -1;
 }
 
 let searchTimeout = null;
@@ -584,7 +628,7 @@ async function searchUsers(query) {
         if (!response.ok) throw new Error('검색 실패');
 
         const users = await response.json();
-        renderUserSearchResults(users);
+        renderUserSearchResults(users, query === '');
     } catch (err) {
         console.error('Failed to search users:', err);
         document.getElementById('userSearchResults').innerHTML =
@@ -592,7 +636,7 @@ async function searchUsers(query) {
     }
 }
 
-function renderUserSearchResults(users) {
+function renderUserSearchResults(users, limitToFour = false) {
     const resultsEl = document.getElementById('userSearchResults');
 
     if (users.length === 0) {
@@ -600,7 +644,8 @@ function renderUserSearchResults(users) {
         return;
     }
 
-    resultsEl.innerHTML = users.map(user => `
+    const displayUsers = limitToFour ? users.slice(0, 4) : users;
+    resultsEl.innerHTML = displayUsers.map(user => `
         <div class="user-item" onclick="createDirectChat('${user.id}')">
             <div class="user-avatar">
                 <svg viewBox="0 0 24 24">
@@ -661,4 +706,387 @@ async function hideRoom(roomId) {
         ui.renderMessages([], currentUserId, null);
         ui.showEmptyState();
     }
+}
+
+function logout() {
+    hideAllModals();
+    document.getElementById('logoutContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+async function confirmLogout() {
+    closeModal();
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        try {
+            await fetch(`${API_BASE}/api/auth/logout`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch {}
+    }
+    localStorage.removeItem('access_token');
+    ws.close();
+    const overlay = document.getElementById('logoutOverlay');
+    if (overlay) {
+        overlay.classList.add('active');
+        setTimeout(() => { window.location.href = '../login.html?from=logout'; }, 600);
+    } else {
+        window.location.href = '../login.html?from=logout';
+    }
+}
+
+async function uploadFileByPath(filePath, fileName, fileSize) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const bytes = await window.api.readFile(filePath);
+        const blob = new Blob([bytes]);
+        const file = new File([blob], fileName);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('room_id', store.currentRoomId);
+
+        const response = await fetch(`${API_BASE}/api/chat/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+
+        const result = await response.json();
+
+        ws.send({
+            type: 'file',
+            room_id: store.currentRoomId,
+            file_id: result.file_id,
+            metadata: {
+                name: fileName,
+                size: fileSize,
+                mime_type: result.mime_type || 'application/octet-stream',
+                url: result.url,
+                thumbnail_url: result.thumbnail_url
+            }
+        });
+    } catch (err) {
+        console.error('Failed to upload file:', err);
+        showErrorModal('파일 업로드 실패', err.message);
+    }
+}
+
+let fileBrowserState = {
+    currentPath: '',
+    history: [],
+    historyIndex: -1,
+    selectedFiles: [],
+    mode: 'file',
+    multiSelect: false,
+    filters: [],
+    resolve: null,
+    reject: null,
+    driveWatcherInterval: null,
+    currentDrives: []
+};
+
+async function openFileBrowser(options = {}) {
+    const { mode = 'file', multiSelect = false, filters = [], title = '파일 선택' } = options;
+
+    fileBrowserState.mode = mode;
+    fileBrowserState.multiSelect = multiSelect;
+    fileBrowserState.filters = filters;
+    fileBrowserState.selectedFiles = [];
+    fileBrowserState.history = [];
+    fileBrowserState.historyIndex = -1;
+
+    document.getElementById('fileBrowserTitle').textContent = title;
+    document.getElementById('fileBrowserSelection').textContent = '선택된 파일 없음';
+    document.getElementById('fileBrowserConfirmBtn').disabled = true;
+
+    const specialFolders = await window.api.getSpecialFolders();
+    await chatNavigateToPath(specialFolders.desktop);
+    await chatInitFileBrowserToolbar();
+    chatStartDriveWatcher();
+
+    document.getElementById('fileBrowserOverlay').style.display = 'flex';
+
+    return new Promise((resolve, reject) => {
+        fileBrowserState.resolve = resolve;
+        fileBrowserState.reject = reject;
+    });
+}
+
+function closeFileBrowser() {
+    chatStopDriveWatcher();
+    document.getElementById('fileBrowserOverlay').style.display = 'none';
+    if (fileBrowserState.resolve) {
+        fileBrowserState.resolve({ success: false, canceled: true });
+        fileBrowserState.resolve = null;
+        fileBrowserState.reject = null;
+    }
+}
+
+async function chatNavigateToPath(path, addToHistory = true) {
+    const loading = document.getElementById('fileBrowserLoading');
+    const list = document.getElementById('fileBrowserList');
+    loading.style.display = 'flex';
+    list.style.display = 'none';
+
+    try {
+        const result = await window.api.readDirectory(path);
+        if (!result.success) {
+            loading.style.display = 'none';
+            list.style.display = 'flex';
+            return;
+        }
+        fileBrowserState.currentPath = path;
+        if (addToHistory) {
+            fileBrowserState.history = fileBrowserState.history.slice(0, fileBrowserState.historyIndex + 1);
+            fileBrowserState.history.push(path);
+            fileBrowserState.historyIndex = fileBrowserState.history.length - 1;
+        }
+        chatUpdateBreadcrumb();
+        chatUpdateNavigationButtons();
+        chatRenderFileList(result.files);
+    } catch (e) {
+    } finally {
+        loading.style.display = 'none';
+        list.style.display = 'flex';
+    }
+}
+
+function chatRenderFileList(files) {
+    const list = document.getElementById('fileBrowserList');
+    list.innerHTML = '';
+    const sorted = [...files].sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name);
+    });
+    for (const file of sorted) {
+        const item = chatCreateFileItem(file);
+        list.appendChild(item);
+    }
+}
+
+function chatCreateFileItem(file) {
+    const item = document.createElement('div');
+    item.className = 'file-browser-item';
+
+    const selectable = chatIsFileSelectable(file);
+    if (!selectable && !file.isDirectory) item.classList.add('disabled');
+
+    const icon = document.createElement('div');
+    icon.className = 'file-browser-icon';
+    if (file.isDirectory) {
+        icon.classList.add('folder');
+        icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+    } else {
+        const ext = file.name.toLowerCase();
+        if (ext.endsWith('.pdf')) {
+            icon.classList.add('pdf');
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>';
+        } else if (ext.endsWith('.png') || ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.gif') || ext.endsWith('.webp')) {
+            icon.classList.add('image');
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>';
+        } else {
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>';
+        }
+    }
+
+    const info = document.createElement('div');
+    info.className = 'file-browser-info';
+    const name = document.createElement('div');
+    name.className = 'file-browser-name';
+    name.textContent = file.name;
+    const meta = document.createElement('div');
+    meta.className = 'file-browser-meta';
+    if (file.isDirectory) {
+        meta.textContent = '폴더';
+    } else {
+        meta.textContent = chatFormatFileSize(file.size);
+    }
+    info.appendChild(name);
+    info.appendChild(meta);
+    item.appendChild(icon);
+    item.appendChild(info);
+
+    if (file.isDirectory) {
+        item.addEventListener('click', async () => {
+            const fullPath = await window.api.joinPath(fileBrowserState.currentPath, file.name);
+            await chatNavigateToPath(fullPath);
+        });
+    } else if (selectable) {
+        item.addEventListener('click', () => chatHandleFileSelection(item, file));
+    }
+    return item;
+}
+
+function chatIsFileSelectable(file) {
+    if (file.isDirectory) return false;
+    if (fileBrowserState.filters.length === 0) return true;
+    const ext = file.name.toLowerCase();
+    return fileBrowserState.filters.some(f => ext.endsWith(`.${f}`));
+}
+
+function chatHandleFileSelection(itemElement, file) {
+    if (fileBrowserState.multiSelect) {
+        const index = fileBrowserState.selectedFiles.findIndex(
+            f => f.name === file.name && f.dirPath === fileBrowserState.currentPath
+        );
+        if (index >= 0) {
+            fileBrowserState.selectedFiles.splice(index, 1);
+            itemElement.classList.remove('selected');
+        } else {
+            fileBrowserState.selectedFiles.push({ ...file, dirPath: fileBrowserState.currentPath });
+            itemElement.classList.add('selected');
+        }
+    } else {
+        document.querySelectorAll('#fileBrowserList .file-browser-item').forEach(el => el.classList.remove('selected'));
+        fileBrowserState.selectedFiles = [{ ...file, dirPath: fileBrowserState.currentPath }];
+        itemElement.classList.add('selected');
+    }
+    chatUpdateSelectionDisplay();
+}
+
+function chatUpdateSelectionDisplay() {
+    const display = document.getElementById('fileBrowserSelection');
+    const confirmBtn = document.getElementById('fileBrowserConfirmBtn');
+    const count = fileBrowserState.selectedFiles.length;
+    if (count === 0) {
+        display.textContent = '선택된 파일 없음';
+        confirmBtn.disabled = true;
+    } else if (count === 1) {
+        display.textContent = fileBrowserState.selectedFiles[0].name;
+        confirmBtn.disabled = false;
+    } else {
+        display.textContent = `${count}개 파일 선택됨`;
+        confirmBtn.disabled = false;
+    }
+}
+
+async function chatUpdateBreadcrumb() {
+    const breadcrumb = document.getElementById('fileBrowserBreadcrumb');
+    const sep = await window.api.getPathSep();
+    const parts = fileBrowserState.currentPath.split(sep).filter(p => p);
+    breadcrumb.innerHTML = '';
+    for (let i = 0; i < parts.length; i++) {
+        if (i > 0) {
+            const separator = document.createElement('span');
+            separator.className = 'breadcrumb-separator';
+            separator.textContent = '›';
+            breadcrumb.appendChild(separator);
+        }
+        const item = document.createElement('div');
+        item.className = 'breadcrumb-item';
+        item.textContent = parts[i];
+        let targetPath = parts.slice(0, i + 1).join(sep);
+        if (sep === '\\' && i === 0) targetPath = targetPath + '\\';
+        else if (sep === '/') targetPath = '/' + targetPath;
+        const clickPath = targetPath;
+        item.addEventListener('click', async () => { await chatNavigateToPath(clickPath); });
+        breadcrumb.appendChild(item);
+    }
+}
+
+function chatUpdateNavigationButtons() {
+    const backBtn = document.getElementById('fileBrowserBackBtn');
+    const upBtn = document.getElementById('fileBrowserUpBtn');
+    backBtn.disabled = fileBrowserState.historyIndex <= 0;
+    const isRoot = fileBrowserState.currentPath === '/' || /^[A-Z]:\\?$/i.test(fileBrowserState.currentPath);
+    upBtn.disabled = isRoot;
+}
+
+async function fileBrowserGoBack() {
+    if (fileBrowserState.historyIndex > 0) {
+        fileBrowserState.historyIndex--;
+        await chatNavigateToPath(fileBrowserState.history[fileBrowserState.historyIndex], false);
+    }
+}
+
+async function fileBrowserGoUp() {
+    const sep = await window.api.getPathSep();
+    const parts = fileBrowserState.currentPath.split(sep).filter(p => p);
+    if (parts.length > 1) {
+        const parentPath = parts.slice(0, -1).join(sep);
+        await chatNavigateToPath(sep === '\\' ? parentPath : '/' + parentPath);
+    } else if (parts.length === 1 && sep === '\\') {
+        await chatNavigateToPath(parts[0] + '\\');
+    }
+}
+
+async function confirmFileBrowserSelection() {
+    if (fileBrowserState.selectedFiles.length === 0) return;
+    const result = { success: true, files: [] };
+    for (const file of fileBrowserState.selectedFiles) {
+        const fullPath = await window.api.joinPath(file.dirPath || fileBrowserState.currentPath, file.name);
+        result.files.push({ path: fullPath, name: file.name, size: file.size });
+    }
+    if (fileBrowserState.resolve) {
+        fileBrowserState.resolve(result);
+        fileBrowserState.resolve = null;
+        fileBrowserState.reject = null;
+    }
+    chatStopDriveWatcher();
+    document.getElementById('fileBrowserOverlay').style.display = 'none';
+}
+
+async function chatInitFileBrowserToolbar() {
+    const result = await window.api.getDrives();
+    if (result.success && result.drives) {
+        fileBrowserState.currentDrives = result.drives;
+        chatUpdateDriveButtons(result.drives);
+    }
+}
+
+function chatUpdateDriveButtons(drives) {
+    const container = document.getElementById('fileBrowserDrives');
+    container.innerHTML = '';
+    if (drives && drives.length > 0) {
+        for (const drive of drives) {
+            const btn = document.createElement('button');
+            btn.className = 'drive-btn';
+            btn.textContent = drive;
+            btn.onclick = () => fileBrowserGoToDrive(drive);
+            container.appendChild(btn);
+        }
+    }
+}
+
+function chatStartDriveWatcher() {
+    if (fileBrowserState.driveWatcherInterval) clearInterval(fileBrowserState.driveWatcherInterval);
+    const checkDrives = async () => {
+        const result = await window.api.getDrives();
+        if (!result.success || !result.drives) return;
+        if (JSON.stringify(result.drives) !== JSON.stringify(fileBrowserState.currentDrives)) {
+            fileBrowserState.currentDrives = result.drives;
+            chatUpdateDriveButtons(result.drives);
+        }
+    };
+    checkDrives();
+    fileBrowserState.driveWatcherInterval = setInterval(checkDrives, 1000);
+}
+
+function chatStopDriveWatcher() {
+    if (fileBrowserState.driveWatcherInterval) {
+        clearInterval(fileBrowserState.driveWatcherInterval);
+        fileBrowserState.driveWatcherInterval = null;
+    }
+}
+
+async function fileBrowserGoToSpecialFolder(name) {
+    const specialFolders = await window.api.getSpecialFolders();
+    const path = specialFolders[name];
+    if (path) await chatNavigateToPath(path);
+}
+
+async function fileBrowserGoToDrive(drive) {
+    await chatNavigateToPath(drive);
+}
+
+function chatFormatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }

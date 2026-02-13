@@ -207,3 +207,11 @@ body.dark-theme .footer-icon:hover {
     height: 20px;
     fill: var(--text-secondary);
 }
+
+.footer-icon.logout-icon:hover {
+    background: rgba(85, 239, 196, 0.12);
+}
+
+.footer-icon.logout-icon:hover svg {
+    fill: var(--accent);
+}

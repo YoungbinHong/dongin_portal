@@ -79,10 +79,10 @@ function confirmGoToMenu() {
     if (overlay) {
         overlay.classList.add('active');
         setTimeout(() => {
-            window.location.href = '../menu.html?from=docs';
+            window.location.href = '../menu.html?from=cert';
         }, 400);
     } else {
-        window.location.href = '../menu.html?from=docs';
+        window.location.href = '../menu.html?from=cert';
     }
 }
 

@@ -2,6 +2,8 @@ const API_BASE = 'http://192.168.0.254:8000';
 
 let currentCategory = 'all';
 let inventoryData = [];
+let currentSort = null;
+let currentSortDir = 'asc';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedTheme();
@@ -62,14 +64,52 @@ async function loadInventory() {
     }
 }
 
+function getStatusOrder(item) {
+    const threshold = item.low_stock_threshold || 10;
+    if (item.quantity === 0) return 0;
+    if (item.quantity < threshold) return 1;
+    return 2;
+}
+
+function sortBy(field) {
+    if (currentSort === field) {
+        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort = field;
+        currentSortDir = 'asc';
+    }
+    document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
+    const icon = document.getElementById('sort-' + field);
+    if (icon) icon.textContent = currentSortDir === 'asc' ? ' ▲' : ' ▼';
+    renderInventory(document.getElementById('searchInput').value);
+}
+
 function renderInventory(searchTerm = '') {
     const tbody = document.getElementById('inventoryList');
 
-    const filteredData = inventoryData.filter(item => {
+    let filteredData = inventoryData.filter(item => {
         const categoryMatch = currentCategory === 'all' || item.category === currentCategory;
         const searchMatch = !searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase());
         return categoryMatch && searchMatch;
     });
+
+    if (currentSort) {
+        filteredData = [...filteredData].sort((a, b) => {
+            let va, vb;
+            if (currentSort === 'status') {
+                va = getStatusOrder(a); vb = getStatusOrder(b);
+            } else if (currentSort === 'quantity') {
+                va = a.quantity; vb = b.quantity;
+            } else if (currentSort === 'created_at') {
+                va = new Date(a.created_at); vb = new Date(b.created_at);
+            } else {
+                va = (a[currentSort] || '').toLowerCase();
+                vb = (b[currentSort] || '').toLowerCase();
+                return currentSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+            }
+            return currentSortDir === 'asc' ? va - vb : vb - va;
+        });
+    }
 
     tbody.innerHTML = filteredData.map(item => {
         const threshold = item.low_stock_threshold || 10;
@@ -248,6 +288,33 @@ async function confirmDeleteInventory() {
     } catch (error) {
         console.error('재고 삭제 실패:', error);
         alert('서버 연결에 실패했습니다.');
+    }
+}
+
+function logout() {
+    hideAllModals();
+    document.getElementById('logoutContent').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+async function confirmLogout() {
+    closeModal();
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        try {
+            await fetch(`${API_BASE}/api/auth/logout`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch {}
+    }
+    localStorage.removeItem('access_token');
+    const overlay = document.getElementById('logoutOverlay');
+    if (overlay) {
+        overlay.classList.add('active');
+        setTimeout(() => { window.location.href = '../login.html?from=logout'; }, 600);
+    } else {
+        window.location.href = '../login.html?from=logout';
     }
 }
 
