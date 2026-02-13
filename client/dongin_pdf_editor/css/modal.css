@@ -168,3 +168,381 @@ body.dark-theme .close-btn {
     background: rgba(255, 255, 255, 0.05);
     color: #b0b0b0;
 }
+
+.file-browser-modal {
+    background: var(--glass);
+    border-radius: 24px;
+    width: 800px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+    animation: modalIn 0.3s ease;
+    position: relative;
+}
+
+.file-browser-header {
+    padding: 25px 30px 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .file-browser-header {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.file-browser-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.file-browser-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #636e72;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.breadcrumb-item:hover {
+    background: rgba(255, 118, 117, 0.1);
+    color: var(--accent);
+}
+
+.breadcrumb-separator {
+    color: #b2bec3;
+    font-size: 11px;
+}
+
+.file-browser-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    flex-wrap: wrap;
+}
+
+body.dark-theme .file-browser-toolbar {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.file-browser-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-browser-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 118, 117, 0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.file-browser-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.file-browser-nav-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+body.dark-theme .file-browser-nav-btn {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.toolbar-divider {
+    width: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0 4px;
+}
+
+body.dark-theme .toolbar-divider {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.special-folder-btn,
+.drive-btn {
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.special-folder-btn:hover,
+.drive-btn:hover {
+    background: rgba(255, 118, 117, 0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+body.dark-theme .special-folder-btn,
+body.dark-theme .drive-btn {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.drive-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.file-browser-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px 20px;
+    position: relative;
+    min-height: 0;
+}
+
+.file-browser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.file-browser-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-browser-item:hover {
+    background: rgba(255, 118, 117, 0.05);
+    border-color: rgba(255, 118, 117, 0.2);
+}
+
+.file-browser-item.selected {
+    background: rgba(255, 118, 117, 0.1);
+    border-color: var(--accent);
+}
+
+.file-browser-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body.dark-theme .file-browser-item {
+    background: rgba(50, 50, 50, 0.4);
+}
+
+body.dark-theme .file-browser-item:hover {
+    background: rgba(70, 70, 70, 0.5);
+}
+
+body.dark-theme .file-browser-item.selected {
+    background: rgba(255, 118, 117, 0.15);
+}
+
+.file-browser-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-browser-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: #636e72;
+}
+
+.file-browser-icon.folder svg {
+    fill: #ffc107;
+}
+
+.file-browser-icon.pdf svg {
+    fill: #c0392b;
+}
+
+.file-browser-icon.image svg {
+    fill: #3498db;
+}
+
+.file-browser-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-browser-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-browser-meta {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-top: 2px;
+}
+
+.file-browser-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #636e72;
+    font-size: 13px;
+}
+
+.file-browser-footer {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+body.dark-theme .file-browser-footer {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.file-browser-selection {
+    font-size: 13px;
+    color: #636e72;
+    font-weight: 500;
+}
+
+.file-browser-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.file-browser-cancel-btn,
+.file-browser-confirm-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.file-browser-cancel-btn {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text);
+}
+
+.file-browser-cancel-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.file-browser-confirm-btn {
+    background: var(--accent);
+    color: white;
+}
+
+.file-browser-confirm-btn:hover:not(:disabled) {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+}
+
+.file-browser-confirm-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body.dark-theme .file-browser-cancel-btn {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .file-browser-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.file-browser-save-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    margin-right: 15px;
+}
+
+.file-browser-save-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.file-browser-save-input {
+    padding: 10px 14px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: white;
+    transition: all 0.2s;
+}
+
+.file-browser-save-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(255, 118, 117, 0.02);
+}
+
+.file-browser-save-input.error {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.05);
+}
+
+.file-browser-save-error {
+    font-size: 12px;
+    color: #e74c3c;
+    min-height: 16px;
+}
+
+body.dark-theme .file-browser-save-input {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .file-browser-save-input:focus {
+    background: rgba(70, 70, 70, 0.5);
+}

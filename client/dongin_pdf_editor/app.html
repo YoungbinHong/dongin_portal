@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http: https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:;">
     <title>DONGIN PDF EDITOR</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c0392b' d='M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/variables.css">
@@ -295,6 +295,58 @@
                         <label class="setting-label">버전 상태</label>
                         <div style="font-size: 13px; color: #2ecc71;">✓ 최신 버전입니다.</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="fileBrowserContent" class="file-browser-modal" style="display: none;">
+            <button class="close-btn" onclick="closeFileBrowser()">×</button>
+
+            <div class="file-browser-header">
+                <div class="file-browser-title" id="fileBrowserTitle">파일 선택</div>
+                <div class="file-browser-breadcrumb" id="fileBrowserBreadcrumb"></div>
+            </div>
+
+            <div class="file-browser-toolbar">
+                <button class="file-browser-nav-btn" id="fileBrowserBackBtn" onclick="fileBrowserGoBack()" disabled>
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    뒤로
+                </button>
+                <button class="file-browser-nav-btn" id="fileBrowserUpBtn" onclick="fileBrowserGoUp()" disabled>
+                    <svg viewBox="0 0 24 24"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
+                    상위
+                </button>
+                <div class="toolbar-divider"></div>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('desktop')">바탕화면</button>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('downloads')">다운로드</button>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('documents')">문서</button>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('pictures')">사진</button>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('music')">음악</button>
+                <button class="special-folder-btn" onclick="fileBrowserGoToSpecialFolder('videos')">동영상</button>
+                <div class="toolbar-divider"></div>
+                <div id="fileBrowserDrives" class="drive-buttons"></div>
+            </div>
+
+            <div class="file-browser-body">
+                <div class="file-browser-list" id="fileBrowserList">
+                </div>
+                <div class="file-browser-loading" id="fileBrowserLoading" style="display:none;">
+                    <div class="preview-spinner"></div>
+                    <span>로딩 중...</span>
+                </div>
+            </div>
+
+            <div class="file-browser-footer">
+                <div class="file-browser-save-input-container" id="fileBrowserSaveInputContainer" style="display: none;">
+                    <label class="file-browser-save-label">파일명:</label>
+                    <input type="text" class="file-browser-save-input" id="fileBrowserSaveInput" placeholder="파일명을 입력하세요">
+                    <span class="file-browser-save-error" id="fileBrowserSaveError"></span>
+                </div>
+
+                <div class="file-browser-selection" id="fileBrowserSelection">선택된 파일 없음</div>
+                <div class="file-browser-actions">
+                    <button class="file-browser-cancel-btn" onclick="closeFileBrowser()">취소</button>
+                    <button class="file-browser-confirm-btn" id="fileBrowserConfirmBtn" onclick="confirmFileBrowserSelection()" disabled>선택</button>
                 </div>
             </div>
         </div>

@@ -674,6 +674,7 @@
     align-items: center;
     gap: 16px;
     min-height: 0;
+    overflow: hidden;
 }
 
 .compress-preview-area {

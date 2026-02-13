@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('api', {
     joinPath: (...args) => ipcRenderer.invoke('join-path', ...args),
     getBasename: (filePath, ext) => ipcRenderer.invoke('get-basename', filePath, ext),
     getExtname: (filePath) => ipcRenderer.invoke('get-extname', filePath),
+    getSpecialFolders: () => ipcRenderer.invoke('get-special-folders'),
+    getDrives: () => ipcRenderer.invoke('get-drives'),
 
     // ===== 파일 시스템 =====
     readDirectory: async (dirPath) => {

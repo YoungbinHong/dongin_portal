@@ -241,14 +241,7 @@ class ChatUI {
 
     showConnectionStatus(connected) {
         const statusEl = document.getElementById('connectionStatus');
-        if (!statusEl) return;
-
-        if (connected) {
-            statusEl.style.display = 'none';
-        } else {
-            statusEl.style.display = 'block';
-            statusEl.textContent = '연결 끊김 - 재연결 중...';
-        }
+        if (statusEl) statusEl.style.display = 'none';
     }
 
     escapeHtml(text) {

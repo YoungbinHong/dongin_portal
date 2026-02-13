@@ -25,6 +25,21 @@ let lastSelectedPage = null;
 let pendingTool = null;
 let pendingDividerPage = null;
 
+let fileBrowserState = {
+    currentPath: '',
+    history: [],
+    historyIndex: -1,
+    selectedFiles: [],
+    mode: 'file',
+    multiSelect: false,
+    filters: [],
+    resolve: null,
+    reject: null,
+    driveWatcherInterval: null,
+    currentDrives: [],
+    defaultFileName: ''
+};
+
 const toolConfig = {
     compress: {
         title: 'PDF 압축',
@@ -83,6 +98,12 @@ window.dismissZoomTip = dismissZoomTip;
 window.togglePageSelection = togglePageSelection;
 window.toggleDivider = toggleDivider;
 window.clearSplitSelection = clearSplitSelection;
+window.closeFileBrowser = closeFileBrowser;
+window.fileBrowserGoBack = fileBrowserGoBack;
+window.fileBrowserGoUp = fileBrowserGoUp;
+window.confirmFileBrowserSelection = confirmFileBrowserSelection;
+window.fileBrowserGoToSpecialFolder = fileBrowserGoToSpecialFolder;
+window.fileBrowserGoToDrive = fileBrowserGoToDrive;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const savedTheme = localStorage.getItem('donginTheme');
@@ -131,6 +152,7 @@ async function selectTool(tool) {
 
     if (hasWork) {
         pendingTool = tool;
+        closeFileBrowser();
         document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => m.style.display = 'none');
         document.getElementById('toolChangeContent').style.display = 'block';
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -141,6 +163,13 @@ async function selectTool(tool) {
 }
 
 async function doSelectTool(tool) {
+    // 모든 모달 강제 정리 (파일 브라우저 포함)
+    document.getElementById('fileBrowserContent').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+    document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => {
+        m.style.display = 'none';
+    });
+
     currentTool = tool;
     selectedFiles = [];
     resetCompressState();
@@ -167,9 +196,9 @@ async function doSelectTool(tool) {
     document.getElementById('dropZone').style.display = 'flex';
     document.getElementById('fileListContainer').style.display = 'none';
     document.getElementById('optionsPanel').style.display = 'none';
-    document.querySelector('.button-group').style.display = 'none';
     document.getElementById('clearSplitBtn').style.display = 'none';
     document.getElementById('compressWorkspace').style.display = 'none';
+    document.querySelector('.button-group').style.display = 'none';
 
     document.querySelectorAll('.tool-options').forEach(opt => {
         opt.style.display = 'none';
@@ -195,102 +224,117 @@ function confirmToolChange() {
 
 async function selectFilesWithDialog(tool) {
     const config = toolConfig[tool];
-    const options = {
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    };
 
-    if (config.multiFile) {
-        options.properties = ['openFile', 'multiSelections'];
-    } else {
-        options.properties = ['openFile'];
-    }
-
-    const { filePaths, canceled } = await window.api.showOpenDialog(options);
-
-    if (canceled || !filePaths || filePaths.length === 0) {
-        selectTool('compress');
-        return;
-    }
-
-    for (const filePath of filePaths) {
-        const result = await window.api.readFile(filePath);
-        if (!result.success) {
-            showAlert('오류', result.error);
-            continue;
-        }
-
-        const base64 = result.data;
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        const arrayBuffer = bytes.buffer;
-
-        const fileName = await window.api.getBasename(filePath);
-        const stat = await window.api.getFileStat(filePath);
-
-        selectedFiles.push({
-            path: filePath,
-            name: fileName,
-            size: stat.size,
-            arrayBuffer: () => Promise.resolve(arrayBuffer)
+    try {
+        const result = await openFileBrowser({
+            mode: 'file',
+            multiSelect: config.multiFile,
+            filters: ['pdf'],
+            title: 'PDF 파일 선택'
         });
-    }
 
-    if (tool === 'split' && selectedFiles.length > 0) {
-        showSplitWorkspace();
-    } else if (tool !== 'compress') {
-        updateFileList();
+        if (!result.success || result.files.length === 0) {
+            selectTool('compress');
+            return;
+        }
+
+        let successCount = 0;
+        for (const fileInfo of result.files) {
+            const fileResult = await window.api.readFile(fileInfo.path);
+            if (!fileResult.success) {
+                console.error('[ERROR] Failed to read file:', fileInfo.path, fileResult.error);
+                showAlert('파일 읽기 오류', `${fileInfo.name}: ${fileResult.error}`);
+                continue;
+            }
+
+            const base64 = fileResult.data;
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const arrayBuffer = bytes.buffer;
+
+            selectedFiles.push({
+                path: fileInfo.path,
+                name: fileInfo.name,
+                size: fileInfo.size,
+                arrayBuffer: () => Promise.resolve(arrayBuffer)
+            });
+            successCount++;
+        }
+
+        if (successCount === 0) {
+            showAlert('알림', '선택한 파일을 읽을 수 없습니다.');
+            return;
+        }
+
+        if (tool === 'split' && selectedFiles.length > 0) {
+            showSplitWorkspace();
+        } else if (tool === 'compress' && selectedFiles.length > 0) {
+            showCompressWorkspace();
+        } else if (tool !== 'compress') {
+            updateFileList();
+        }
+
+    } catch (error) {
+        if (!error.canceled) {
+            showAlert('오류', error.message);
+        }
+        selectTool('compress');
     }
 }
 
 async function selectImageFilesWithDialog() {
-    const options = {
-        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }],
-        properties: ['openFile', 'multiSelections']
-    };
-
-    const { filePaths, canceled } = await window.api.showOpenDialog(options);
-
-    if (canceled || !filePaths || filePaths.length === 0) {
-        return;
-    }
-
-    for (const filePath of filePaths) {
-        const result = await window.api.readFile(filePath);
-        if (!result.success) {
-            showAlert('오류', result.error);
-            continue;
-        }
-
-        const base64 = result.data;
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        const arrayBuffer = bytes.buffer;
-
-        const fileName = await window.api.getBasename(filePath);
-        const stat = await window.api.getFileStat(filePath);
-
-        const ext = fileName.toLowerCase();
-        let type = 'image/png';
-        if (ext.endsWith('.jpg') || ext.endsWith('.jpeg')) {
-            type = 'image/jpeg';
-        }
-
-        selectedFiles.push({
-            path: filePath,
-            name: fileName,
-            size: stat.size,
-            type: type,
-            arrayBuffer: () => Promise.resolve(arrayBuffer)
+    try {
+        const result = await openFileBrowser({
+            mode: 'file',
+            multiSelect: true,
+            filters: ['png', 'jpg', 'jpeg'],
+            title: '이미지 파일 선택'
         });
-    }
 
-    updateFileList();
+        if (!result.success || result.files.length === 0) {
+            return;
+        }
+
+        for (const fileInfo of result.files) {
+            const fileResult = await window.api.readFile(fileInfo.path);
+            if (!fileResult.success) {
+                showAlert('오류', fileResult.error);
+                continue;
+            }
+
+            const base64 = fileResult.data;
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const arrayBuffer = bytes.buffer;
+
+            const ext = fileInfo.name.toLowerCase();
+            let type = 'image/png';
+            if (ext.endsWith('.jpg') || ext.endsWith('.jpeg')) {
+                type = 'image/jpeg';
+            }
+
+            selectedFiles.push({
+                path: fileInfo.path,
+                name: fileInfo.name,
+                size: fileInfo.size,
+                type: type,
+                arrayBuffer: () => Promise.resolve(arrayBuffer)
+            });
+        }
+
+        updateFileList();
+
+    } catch (error) {
+        if (!error.canceled) {
+            showAlert('오류', error.message);
+        }
+    }
 }
 
 function resetCompressState() {
@@ -321,6 +365,22 @@ function resetSplitState() {
     if (grid) {
         grid.innerHTML = '';
     }
+}
+
+function resetToInitialState() {
+    selectedFiles = [];
+    resetCompressState();
+    resetSplitState();
+
+    document.getElementById('dropZone').style.display = 'flex';
+    document.getElementById('fileListContainer').style.display = 'none';
+    document.getElementById('optionsPanel').style.display = 'none';
+    document.querySelector('.button-group').style.display = 'none';
+    document.getElementById('executeBtn').style.display = '';
+    document.getElementById('clearSplitBtn').style.display = 'none';
+    document.getElementById('compressWorkspace').style.display = 'none';
+    document.querySelector('.main-container').classList.remove('split-active');
+    document.getElementById('optionsPanel').classList.remove('split-mode');
 }
 
 function applyCompressZoom(delta) {
@@ -357,12 +417,12 @@ function setupFileSelectButton() {
     const selectBtn = document.querySelector('.select-btn');
     selectBtn.onclick = null;
     selectBtn.addEventListener('click', async () => {
-        if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'pdfToImage') {
+        if (currentTool === 'compress') {
+            await selectFilesWithDialog('compress');
+        } else if (currentTool === 'split' || currentTool === 'merge' || currentTool === 'pdfToImage') {
             await selectFilesWithDialog(currentTool);
         } else if (currentTool === 'imageToPdf') {
             await selectImageFilesWithDialog();
-        } else {
-            document.getElementById('fileInput').click();
         }
     });
 
@@ -373,6 +433,8 @@ function setupFileSelectButton() {
             await selectFilesWithDialog(currentTool);
         } else if (currentTool === 'imageToPdf') {
             await selectImageFilesWithDialog();
+        } else if (currentTool === 'pdfToImage') {
+            await selectFilesWithDialog(currentTool);
         } else {
             document.getElementById('fileInput').click();
         }
@@ -470,7 +532,6 @@ function showCompressWorkspace() {
     document.getElementById('dropZone').style.display = 'none';
     document.getElementById('fileListContainer').style.display = 'none';
     document.getElementById('optionsPanel').style.display = 'none';
-    document.getElementById('executeBtn').style.display = 'none';
     document.getElementById('compressWorkspace').style.display = 'flex';
 
     document.getElementById('compressFileName').textContent = file.name;
@@ -571,7 +632,8 @@ async function renderCompressPreview() {
         const containerWidth = Math.max(canvas.parentElement.clientWidth - 20, 200);
         const containerHeight = Math.max(canvas.parentElement.clientHeight - 20, 200);
         const scaleH = containerHeight / canvas.height;
-        const displayScale = scaleH;
+        const scaleW = containerWidth / canvas.width;
+        const displayScale = Math.min(scaleH, scaleW);
 
         const baseWidth = canvas.width * displayScale;
         const baseHeight = canvas.height * displayScale;
@@ -664,7 +726,6 @@ function updateFileList() {
     const fileList = document.getElementById('fileList');
     const dropZone = document.getElementById('dropZone');
     const optionsPanel = document.getElementById('optionsPanel');
-    const executeBtn = document.getElementById('executeBtn');
 
     if (selectedFiles.length === 0) {
         dropZone.style.display = 'flex';
@@ -845,7 +906,6 @@ async function compressPdfToImages(pdfArrayBuffer, jpegQuality) {
     const pdf = await pdfjsLib.getDocument({ data: pdfArrayBuffer }).promise;
     const newPdf = await PDFDocument.create();
     const scale = 0.7 + (jpegQuality - 0.65) * 4.8;
-    console.log('Compress - jpegQuality:', jpegQuality, 'scale:', scale);
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -898,10 +958,9 @@ async function executeCompress() {
     const slider = document.getElementById('compressSlider');
     const jpegQuality = 0.65 + (parseInt(slider.value) / 100) * 0.27;
 
-    const { filePath, canceled } = await window.api.showSaveDialog({
-        defaultPath: file.name.replace('.pdf', '_compressed.pdf'),
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    });
+    const { filePath, canceled } = await saveFileWithDialog(
+        file.name.replace('.pdf', '_compressed.pdf')
+    );
 
     if (canceled) return;
 
@@ -909,7 +968,11 @@ async function executeCompress() {
 
     try {
         const arrayBuffer = compressArrayBuffer ? compressArrayBuffer.slice(0) : await file.arrayBuffer();
-        const compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
+        let compressedBytes = await compressPdfToImages(arrayBuffer, jpegQuality);
+
+        if (compressedBytes.length > arrayBuffer.byteLength) {
+            compressedBytes = new Uint8Array(arrayBuffer);
+        }
 
         let binaryString = '';
         const chunkSize = 8192;
@@ -923,6 +986,7 @@ async function executeCompress() {
 
         if (result.success) {
             showAlert('완료', '압축 완료');
+            resetToInitialState();
         } else {
             showAlert('오류', result.error);
         }
@@ -950,24 +1014,31 @@ async function executeSplit() {
         return;
     }
 
-    const { filePaths, canceled } = await window.api.showOpenDialog({
-        properties: ['openDirectory'],
-        title: '분할된 파일을 저장할 폴더 선택'
+    const result = await openFileBrowser({
+        mode: 'save-prefix',
+        multiSelect: false,
+        filters: [],
+        title: '저장 위치 및 파일명 설정',
+        defaultFileName: file.name.replace('.pdf', '')
     });
 
-    if (canceled || !filePaths || filePaths.length === 0) return;
+    if (!result.success) return;
+    const outputFolder = result.currentPath;
+    const prefix = result.fileName || 'output';
 
     showProgress();
 
     try {
-        const result = await window.api.splitPdf(file.path, filePaths[0], ranges);
+        const apiResult = await window.api.splitPdf(file.path, outputFolder, ranges, prefix);
         closeModal();
-        if (result.success && result.files && result.files.length > 0) {
-            showAlert('완료', `${result.files.length}개의 파일로 분할되었습니다.`);
-        } else if (result.error) {
-            showAlert('오류', result.error);
+        if (apiResult.success && apiResult.files && apiResult.files.length > 0) {
+            showAlert('완료', `${apiResult.files.length}개의 파일로 분할되었습니다.`);
+            resetToInitialState();
+        } else if (apiResult.error) {
+            showAlert('오류', apiResult.error);
         } else {
             showAlert('완료', '분할이 완료되었습니다.');
+            resetToInitialState();
         }
     } catch (e) {
         closeModal();
@@ -978,10 +1049,7 @@ async function executeSplit() {
 async function executeMerge() {
     const paths = selectedFiles.map(f => f.path);
 
-    const { filePath, canceled } = await window.api.showSaveDialog({
-        defaultPath: 'merged.pdf',
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    });
+    const { filePath, canceled } = await saveFileWithDialog('merged.pdf');
 
     if (canceled) return;
 
@@ -991,6 +1059,7 @@ async function executeMerge() {
         await window.api.mergePdfs(paths, filePath);
         closeModal();
         showAlert('완료', `${selectedFiles.length}개의 PDF가 병합되었습니다.`);
+        resetToInitialState();
     } catch (e) {
         closeModal();
         showAlert('오류', e.message);
@@ -998,14 +1067,12 @@ async function executeMerge() {
 }
 
 async function executeImageToPdf() {
-    const { filePath, canceled } = await window.api.showSaveDialog({
-        defaultPath: 'converted.pdf',
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    });
+    const { filePath, canceled } = await saveFileWithDialog('converted.pdf');
 
     if (canceled) return;
 
     showProgress();
+    await new Promise(r => setTimeout(r, 100));
 
     try {
         const newPdf = await PDFDocument.create();
@@ -1041,6 +1108,7 @@ async function executeImageToPdf() {
 
         if (result.success) {
             showAlert('완료', `${selectedFiles.length}개의 이미지가 PDF로 변환되었습니다.`);
+            resetToInitialState();
         } else {
             showAlert('오류', result.error);
         }
@@ -1053,20 +1121,23 @@ async function executeImageToPdf() {
 async function executePdfToImage() {
     const file = selectedFiles[0];
 
-    const { filePaths, canceled } = await window.api.showOpenDialog({
-        properties: ['openDirectory'],
-        title: '이미지를 저장할 폴더 선택'
+    const result = await openFileBrowser({
+        mode: 'save-prefix',
+        multiSelect: false,
+        filters: [],
+        title: '저장 위치 및 파일명 설정',
+        defaultFileName: file.name.replace('.pdf', '')
     });
 
-    if (canceled || !filePaths || filePaths.length === 0) return;
+    if (!result.success) return;
 
     showProgress();
 
     try {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const outputFolder = filePaths[0];
-        const baseName = file.name.replace('.pdf', '');
+        const outputFolder = result.currentPath;
+        const baseName = result.fileName || file.name.replace('.pdf', '');
 
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
@@ -1098,6 +1169,7 @@ async function executePdfToImage() {
 
         await completeProgress();
         showAlert('완료', `${pdf.numPages}개의 이미지로 추출되었습니다.`);
+        resetToInitialState();
     } catch (e) {
         await completeProgress();
         showAlert('오류', e.message);
@@ -1122,6 +1194,7 @@ function parsePageRanges(str) {
 }
 
 function showProgress() {
+    closeFileBrowser();
     const config = toolConfig[currentTool];
     document.getElementById('progressTitle').textContent = config.title + ' 중...';
     document.getElementById('progressBar').style.width = '0%';
@@ -1145,6 +1218,7 @@ function showProgress() {
 }
 
 function showComplete() {
+    closeFileBrowser();
     const messages = {
         compress: `${selectedFiles.length}개의 PDF 파일이 압축되었습니다.`,
         split: 'PDF 파일이 분할되었습니다.',
@@ -1164,6 +1238,7 @@ function downloadResult() {
 }
 
 function showAlert(title, message) {
+    closeFileBrowser();
     document.getElementById('alertTitle').textContent = title;
     document.getElementById('alertBody').textContent = message;
     document.querySelectorAll('.alert-modal').forEach(m => m.style.display = 'none');
@@ -1202,6 +1277,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 function logout() {
+    closeFileBrowser();
     document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => m.style.display = 'none');
     document.getElementById('logoutContent').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
@@ -1209,6 +1285,7 @@ function logout() {
 
 function confirmLogout() {
     closeModal();
+    closeFileBrowser();
     const overlay = document.getElementById('logoutOverlay');
     overlay.classList.add('active');
     setTimeout(() => {
@@ -1217,6 +1294,7 @@ function confirmLogout() {
 }
 
 function showHomeConfirm() {
+    closeFileBrowser();
     document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => m.style.display = 'none');
     document.getElementById('homeContent').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'flex';
@@ -1224,6 +1302,7 @@ function showHomeConfirm() {
 
 function confirmGoToMenu() {
     closeModal();
+    closeFileBrowser();
 
     const pathname = window.location.pathname;
     const appMatch = pathname.match(/client[\/\\]dongin_([^\/\\]+)/);
@@ -1242,6 +1321,7 @@ function confirmGoToMenu() {
 }
 
 function openSettings() {
+    closeFileBrowser();
     const modal = document.getElementById('modalOverlay');
     const settingsContent = document.getElementById('settingsContent');
     document.querySelectorAll('.alert-modal').forEach(el => el.style.display = 'none');
@@ -1402,6 +1482,7 @@ function toggleDivider(pageNum) {
         updateSplitClearButton();
     } else {
         pendingDividerPage = pageNum;
+        closeFileBrowser();
         document.getElementById('dividerConfirmMsg').textContent = `페이지 ${pageNum}와 ${pageNum + 1} 사이를 기준으로 두 파일로 나누시겠습니까?`;
         document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => m.style.display = 'none');
         document.getElementById('dividerConfirm').style.display = 'block';
@@ -1491,4 +1572,542 @@ function updateSplitClearButton() {
 
     const hasSelection = selectedPages.size > 0 || activeDividers.size > 0;
     btn.disabled = !hasSelection;
+}
+
+async function openFileBrowser(options = {}) {
+    const {
+        mode = 'file',
+        multiSelect = false,
+        filters = [],
+        title = '파일 선택',
+        defaultFileName = ''
+    } = options;
+
+    fileBrowserState.mode = mode;
+    fileBrowserState.multiSelect = multiSelect;
+    fileBrowserState.filters = filters;
+    fileBrowserState.selectedFiles = [];
+    fileBrowserState.history = [];
+    fileBrowserState.historyIndex = -1;
+    fileBrowserState.defaultFileName = defaultFileName;
+
+    const titleText = mode === 'directory' ? '폴더 선택' :
+                      mode === 'save' ? '파일 저장' :
+                      mode === 'save-prefix' ? '저장 위치 및 파일명 설정' : title;
+    document.getElementById('fileBrowserTitle').textContent = titleText;
+
+    const saveInputContainer = document.getElementById('fileBrowserSaveInputContainer');
+    const saveInput = document.getElementById('fileBrowserSaveInput');
+    const selectionDisplay = document.getElementById('fileBrowserSelection');
+    const confirmBtn = document.getElementById('fileBrowserConfirmBtn');
+
+    if (mode === 'save' || mode === 'save-prefix') {
+        saveInputContainer.style.display = 'flex';
+        selectionDisplay.style.display = 'none';
+        saveInput.value = defaultFileName;
+        saveInput.placeholder = mode === 'save-prefix' ?
+            '파일명 접두사 (예: output → output_1.pdf, output_2.pdf)' :
+            '파일명을 입력하세요';
+        saveInput.addEventListener('input', handleSaveInputChange);
+        confirmBtn.textContent = mode === 'save-prefix' ? '선택' : '저장';
+        validateSaveFileName();
+    } else {
+        saveInputContainer.style.display = 'none';
+        selectionDisplay.style.display = 'block';
+        confirmBtn.textContent = '선택';
+        saveInput.removeEventListener('input', handleSaveInputChange);
+    }
+
+    const specialFolders = await window.api.getSpecialFolders();
+    await navigateToPath(specialFolders.desktop);
+    await initFileBrowserToolbar();
+    startDriveWatcher();
+
+    document.querySelectorAll('.alert-modal, .settings-modal').forEach(m => m.style.display = 'none');
+    document.getElementById('fileBrowserContent').style.display = 'flex';
+    document.getElementById('modalOverlay').style.display = 'flex';
+
+    return new Promise((resolve, reject) => {
+        fileBrowserState.resolve = resolve;
+        fileBrowserState.reject = reject;
+    });
+}
+
+function handleSaveInputChange() {
+    validateSaveFileName();
+}
+
+function validateSaveFileName() {
+    const mode = fileBrowserState.mode;
+    const input = document.getElementById('fileBrowserSaveInput');
+    const error = document.getElementById('fileBrowserSaveError');
+    const confirmBtn = document.getElementById('fileBrowserConfirmBtn');
+    const fileName = input.value.trim();
+
+    if (!fileName) {
+        input.classList.add('error');
+        error.textContent = mode === 'save-prefix' ? '파일명 접두사를 입력하세요' : '파일명을 입력하세요';
+        confirmBtn.disabled = true;
+        return false;
+    }
+
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(fileName)) {
+        input.classList.add('error');
+        error.textContent = '파일명에 사용할 수 없는 문자가 포함되어 있습니다';
+        confirmBtn.disabled = true;
+        return false;
+    }
+
+    // save-prefix 모드일 때는 확장자 체크 안함
+    if (mode === 'save' && !fileName.toLowerCase().endsWith('.pdf')) {
+        input.classList.add('error');
+        error.textContent = '파일명은 .pdf로 끝나야 합니다';
+        confirmBtn.disabled = true;
+        return false;
+    }
+
+    input.classList.remove('error');
+    error.textContent = '';
+    confirmBtn.disabled = false;
+    return true;
+}
+
+async function navigateToPath(path, addToHistory = true) {
+    const loading = document.getElementById('fileBrowserLoading');
+    const list = document.getElementById('fileBrowserList');
+
+    loading.style.display = 'flex';
+    list.style.display = 'none';
+
+    try {
+        const result = await window.api.readDirectory(path);
+
+        if (!result.success) {
+            showAlert('오류', result.error || '폴더를 읽을 수 없습니다.');
+            loading.style.display = 'none';
+            return;
+        }
+
+        fileBrowserState.currentPath = path;
+
+        if (addToHistory) {
+            fileBrowserState.history = fileBrowserState.history.slice(0, fileBrowserState.historyIndex + 1);
+            fileBrowserState.history.push(path);
+            fileBrowserState.historyIndex = fileBrowserState.history.length - 1;
+        }
+
+        updateBreadcrumb();
+        updateNavigationButtons();
+        renderFileList(result.files);
+
+    } catch (error) {
+        showAlert('오류', error.message);
+    } finally {
+        loading.style.display = 'none';
+        list.style.display = 'flex';
+    }
+}
+
+function renderFileList(files) {
+    const list = document.getElementById('fileBrowserList');
+    list.innerHTML = '';
+
+    const sorted = [...files].sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    for (const file of sorted) {
+        const item = createFileItem(file);
+        list.appendChild(item);
+    }
+}
+
+function createFileItem(file) {
+    const item = document.createElement('div');
+    item.className = 'file-browser-item';
+
+    const isSelectable = isFileSelectable(file);
+
+    if (fileBrowserState.mode === 'save' && !file.isDirectory) {
+        item.classList.add('disabled');
+    } else if (!isSelectable && !file.isDirectory) {
+        item.classList.add('disabled');
+    }
+
+    const icon = document.createElement('div');
+    icon.className = 'file-browser-icon';
+
+    if (file.isDirectory) {
+        icon.classList.add('folder');
+        icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>';
+    } else {
+        const ext = file.name.toLowerCase();
+        if (ext.endsWith('.pdf')) {
+            icon.classList.add('pdf');
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>';
+        } else if (ext.endsWith('.png') || ext.endsWith('.jpg') || ext.endsWith('.jpeg')) {
+            icon.classList.add('image');
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>';
+        } else {
+            icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>';
+        }
+    }
+
+    const info = document.createElement('div');
+    info.className = 'file-browser-info';
+
+    const name = document.createElement('div');
+    name.className = 'file-browser-name';
+    name.textContent = file.name;
+
+    const meta = document.createElement('div');
+    meta.className = 'file-browser-meta';
+
+    if (file.isDirectory) {
+        meta.textContent = '폴더';
+    } else {
+        const sizeText = formatFileSize(file.size);
+        const dateText = new Date(file.modifiedTime).toLocaleDateString();
+        meta.textContent = `${sizeText} • ${dateText}`;
+    }
+
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    item.appendChild(icon);
+    item.appendChild(info);
+
+    if (file.isDirectory) {
+        item.addEventListener('click', async () => {
+            const fullPath = await window.api.joinPath(fileBrowserState.currentPath, file.name);
+            await navigateToPath(fullPath);
+        });
+    } else if (fileBrowserState.mode !== 'save' && isSelectable) {
+        item.addEventListener('click', () => {
+            handleFileSelection(item, file);
+        });
+    }
+
+    return item;
+}
+
+function isFileSelectable(file) {
+    if (fileBrowserState.mode === 'directory') {
+        return file.isDirectory;
+    }
+
+    if (file.isDirectory) return false;
+
+    if (fileBrowserState.filters.length === 0) return true;
+
+    const ext = file.name.toLowerCase();
+    return fileBrowserState.filters.some(filter => ext.endsWith(`.${filter}`));
+}
+
+function handleFileSelection(itemElement, file) {
+    if (fileBrowserState.multiSelect) {
+        const index = fileBrowserState.selectedFiles.findIndex(
+            f => f.name === file.name && f.dirPath === fileBrowserState.currentPath
+        );
+
+        if (index >= 0) {
+            fileBrowserState.selectedFiles.splice(index, 1);
+            itemElement.classList.remove('selected');
+        } else {
+            fileBrowserState.selectedFiles.push({ ...file, dirPath: fileBrowserState.currentPath });
+            itemElement.classList.add('selected');
+        }
+    } else {
+        document.querySelectorAll('.file-browser-item').forEach(el => el.classList.remove('selected'));
+        fileBrowserState.selectedFiles = [file];
+        itemElement.classList.add('selected');
+    }
+
+    updateSelectionDisplay();
+}
+
+function updateSelectionDisplay() {
+    const display = document.getElementById('fileBrowserSelection');
+    const confirmBtn = document.getElementById('fileBrowserConfirmBtn');
+
+    const count = fileBrowserState.selectedFiles.length;
+
+    if (count === 0) {
+        display.textContent = '선택된 파일 없음';
+        confirmBtn.disabled = true;
+    } else if (count === 1) {
+        display.textContent = fileBrowserState.selectedFiles[0].name;
+        confirmBtn.disabled = false;
+    } else {
+        display.textContent = `${count}개 파일 선택됨`;
+        confirmBtn.disabled = false;
+    }
+}
+
+async function updateBreadcrumb() {
+    const breadcrumb = document.getElementById('fileBrowserBreadcrumb');
+    const sep = await window.api.getPathSep();
+    const parts = fileBrowserState.currentPath.split(sep).filter(p => p);
+
+    breadcrumb.innerHTML = '';
+
+    for (let i = 0; i < parts.length; i++) {
+        if (i > 0) {
+            const separator = document.createElement('span');
+            separator.className = 'breadcrumb-separator';
+            separator.textContent = '›';
+            breadcrumb.appendChild(separator);
+        }
+
+        const item = document.createElement('div');
+        item.className = 'breadcrumb-item';
+        item.textContent = parts[i];
+
+        let targetPath = parts.slice(0, i + 1).join(sep);
+        if (sep === '\\' && i === 0) {
+            targetPath = targetPath + '\\';
+        } else if (sep === '/') {
+            targetPath = '/' + targetPath;
+        }
+
+        const clickPath = targetPath;
+        item.addEventListener('click', async () => {
+            await navigateToPath(clickPath);
+        });
+
+        breadcrumb.appendChild(item);
+    }
+}
+
+function updateNavigationButtons() {
+    const backBtn = document.getElementById('fileBrowserBackBtn');
+    const upBtn = document.getElementById('fileBrowserUpBtn');
+
+    backBtn.disabled = fileBrowserState.historyIndex <= 0;
+
+    const isRoot = fileBrowserState.currentPath === '/' ||
+                   /^[A-Z]:\\?$/i.test(fileBrowserState.currentPath);
+    upBtn.disabled = isRoot;
+}
+
+async function fileBrowserGoBack() {
+    if (fileBrowserState.historyIndex > 0) {
+        fileBrowserState.historyIndex--;
+        const path = fileBrowserState.history[fileBrowserState.historyIndex];
+        await navigateToPath(path, false);
+    }
+}
+
+async function fileBrowserGoUp() {
+    const sep = await window.api.getPathSep();
+    const parts = fileBrowserState.currentPath.split(sep).filter(p => p);
+
+    if (parts.length > 1) {
+        const parentPath = parts.slice(0, -1).join(sep);
+        await navigateToPath(sep === '\\' ? parentPath : '/' + parentPath);
+    } else if (parts.length === 1 && sep === '\\') {
+        await navigateToPath(parts[0] + '\\');
+    }
+}
+
+async function confirmFileBrowserSelection() {
+    if (fileBrowserState.mode === 'save') {
+        if (!validateSaveFileName()) {
+            return;
+        }
+
+        const fileName = document.getElementById('fileBrowserSaveInput').value.trim();
+        const fullPath = await window.api.joinPath(fileBrowserState.currentPath, fileName);
+
+        const result = {
+            success: true,
+            filePath: fullPath,
+            fileName: fileName
+        };
+
+        if (fileBrowserState.resolve) {
+            fileBrowserState.resolve(result);
+            fileBrowserState.resolve = null;
+            fileBrowserState.reject = null;
+        }
+
+        closeFileBrowser();
+        return;
+    }
+
+    if (fileBrowserState.mode === 'save-prefix') {
+        if (!validateSaveFileName()) {
+            return;
+        }
+
+        const prefix = document.getElementById('fileBrowserSaveInput').value.trim();
+
+        const result = {
+            success: true,
+            currentPath: fileBrowserState.currentPath,
+            fileName: prefix,
+            files: []
+        };
+
+        if (fileBrowserState.resolve) {
+            fileBrowserState.resolve(result);
+            fileBrowserState.resolve = null;
+            fileBrowserState.reject = null;
+        }
+
+        closeFileBrowser();
+        return;
+    }
+
+    if (fileBrowserState.selectedFiles.length === 0) return;
+
+    const result = {
+        success: true,
+        files: []
+    };
+
+    for (const file of fileBrowserState.selectedFiles) {
+        const fullPath = await window.api.joinPath(file.dirPath || fileBrowserState.currentPath, file.name);
+        result.files.push({
+            path: fullPath,
+            name: file.name,
+            size: file.size,
+            isDirectory: file.isDirectory
+        });
+    }
+
+    if (fileBrowserState.resolve) {
+        fileBrowserState.resolve(result);
+        fileBrowserState.resolve = null;
+        fileBrowserState.reject = null;
+    }
+
+    closeFileBrowser();
+}
+
+function closeFileBrowser() {
+    stopDriveWatcher();
+
+    document.getElementById('fileBrowserContent').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+
+    if (fileBrowserState.resolve) {
+        fileBrowserState.resolve({ success: false, canceled: true });
+        fileBrowserState.resolve = null;
+        fileBrowserState.reject = null;
+    }
+}
+
+async function selectDirectoryWithDialog() {
+    try {
+        const result = await openFileBrowser({
+            mode: 'directory',
+            multiSelect: false,
+            filters: [],
+            title: '저장 폴더 선택'
+        });
+
+        if (!result.success || result.files.length === 0) {
+            return { canceled: true };
+        }
+
+        return {
+            canceled: false,
+            filePaths: [result.files[0].path]
+        };
+
+    } catch (error) {
+        return { canceled: true };
+    }
+}
+
+async function saveFileWithDialog(defaultFileName = 'output.pdf') {
+    try {
+        const result = await openFileBrowser({
+            mode: 'save',
+            multiSelect: false,
+            filters: ['pdf'],
+            title: '파일 저장',
+            defaultFileName: defaultFileName
+        });
+
+        if (!result.success) {
+            return { canceled: true };
+        }
+
+        return {
+            canceled: false,
+            filePath: result.filePath
+        };
+
+    } catch (error) {
+        return { canceled: true };
+    }
+}
+
+async function initFileBrowserToolbar() {
+    const result = await window.api.getDrives();
+    if (result.success && result.drives) {
+        fileBrowserState.currentDrives = result.drives;
+        updateDriveButtons(result.drives);
+    }
+}
+
+function updateDriveButtons(drives) {
+    const drivesContainer = document.getElementById('fileBrowserDrives');
+    drivesContainer.innerHTML = '';
+
+    if (drives && drives.length > 0) {
+        for (const drive of drives) {
+            const btn = document.createElement('button');
+            btn.className = 'drive-btn';
+            btn.textContent = drive;
+            btn.onclick = () => fileBrowserGoToDrive(drive);
+            drivesContainer.appendChild(btn);
+        }
+    }
+}
+
+function startDriveWatcher() {
+    if (fileBrowserState.driveWatcherInterval) {
+        clearInterval(fileBrowserState.driveWatcherInterval);
+    }
+
+    const checkDrives = async () => {
+        const result = await window.api.getDrives();
+        if (!result.success || !result.drives) return;
+
+        const newDrives = result.drives;
+        const currentDrives = fileBrowserState.currentDrives;
+
+        if (JSON.stringify(newDrives) !== JSON.stringify(currentDrives)) {
+            fileBrowserState.currentDrives = newDrives;
+            updateDriveButtons(newDrives);
+        }
+    };
+
+    checkDrives();
+    fileBrowserState.driveWatcherInterval = setInterval(checkDrives, 1000);
+}
+
+function stopDriveWatcher() {
+    if (fileBrowserState.driveWatcherInterval) {
+        clearInterval(fileBrowserState.driveWatcherInterval);
+        fileBrowserState.driveWatcherInterval = null;
+    }
+}
+
+async function fileBrowserGoToSpecialFolder(name) {
+    const specialFolders = await window.api.getSpecialFolders();
+    const path = specialFolders[name];
+    if (path) {
+        await navigateToPath(path);
+    }
+}
+
+async function fileBrowserGoToDrive(drive) {
+    await navigateToPath(drive);
 }

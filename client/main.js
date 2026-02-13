@@ -138,12 +138,46 @@ ipcMain.handle('get-extname', (event, filePath) => {
     return path.extname(filePath);
 });
 
+ipcMain.handle('get-special-folders', () => {
+    return {
+        desktop: app.getPath('desktop'),
+        downloads: app.getPath('downloads'),
+        documents: app.getPath('documents'),
+        pictures: app.getPath('pictures'),
+        music: app.getPath('music'),
+        videos: app.getPath('videos')
+    };
+});
+
+ipcMain.handle('get-drives', () => {
+    if (os.platform() !== 'win32') {
+        return { success: true, drives: [] };
+    }
+
+    try {
+        const drives = [];
+        for (let i = 65; i < 91; i++) {
+            const drive = String.fromCharCode(i) + ':';
+            try {
+                fs.accessSync(drive + '\\');
+                drives.push(drive + '\\');
+            } catch (e) {}
+        }
+        return { success: true, drives };
+    } catch (err) {
+        return { success: true, drives: [] };
+    }
+});
+
 // ===== IPC 핸들러: 파일 시스템 =====
 ipcMain.handle('read-directory', async (event, dirPath) => {
     try {
         const files = await fsPromises.readdir(dirPath);
-        // 각 파일의 정보도 함께 반환
         const fileInfos = await Promise.all(files.map(async (fileName) => {
+            if (fileName.startsWith('.')) {
+                return null;
+            }
+
             const fullPath = path.join(dirPath, fileName);
             try {
                 const stat = await fsPromises.stat(fullPath);
@@ -154,16 +188,12 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
                     modifiedTime: stat.mtime.getTime()
                 };
             } catch (e) {
-                return {
-                    name: fileName,
-                    isDirectory: false,
-                    size: 0,
-                    modifiedTime: 0,
-                    error: true
-                };
+                return null;
             }
         }));
-        return { success: true, files: fileInfos };
+
+        const filtered = fileInfos.filter(f => f !== null);
+        return { success: true, files: filtered };
     } catch (err) {
         return { success: false, error: err.message };
     }
