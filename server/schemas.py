@@ -10,6 +10,7 @@ class AiChatMessage(BaseModel):
 class AiChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     history: list[AiChatMessage] | None = None
+    session_id: Optional[str] = None
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -73,6 +74,11 @@ class PostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     category: str = Field(default="general")
     content: str = Field(..., min_length=1)
+
+class PostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = None
+    content: Optional[str] = Field(None, min_length=1)
 
 class PostResponse(BaseModel):
     id: int
@@ -169,3 +175,13 @@ class UserSearchResponse(BaseModel):
     id: int
     name: str
     email: Optional[str]
+
+class AiChatLogResponse(BaseModel):
+    id: int
+    user_id: int
+    message: str
+    response: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

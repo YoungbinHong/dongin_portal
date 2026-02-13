@@ -131,3 +131,20 @@ class ChatReadReceipt(Base):
 
     message = relationship("ChatMessage", back_populates="read_receipts")
     user = relationship("User")
+
+class PostView(Base):
+    __tablename__ = "post_views"
+
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    viewed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class AiChatLog(Base):
+    __tablename__ = "ai_chat_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

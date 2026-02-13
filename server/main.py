@@ -22,16 +22,18 @@ from logger import logger, get_user_logger, get_access_logger, get_event_logger
 import uuid
 
 from database import engine, get_db, Base
-from models import User, Post, Comment, Inventory, ChatRoom, ChatRoomMember, ChatMessage, ChatFile, ChatReadReceipt
+from models import User, Post, Comment, Inventory, ChatRoom, ChatRoomMember, ChatMessage, ChatFile, ChatReadReceipt, PostView, AiChatLog
 from schemas import (
     UserCreate, UserUpdate, UserResponse,
     Token, PasswordChange, EventLog,
-    PostCreate, PostResponse, CommentCreate, CommentResponse,
+    PostCreate, PostUpdate, PostResponse, CommentCreate, CommentResponse,
     AiChatRequest,
     CheckEmailRequest, SendOtpRequest, VerifyOtpRequest, SignupRequest,
     InventoryCreate, InventoryUpdate, InventoryResponse,
     ChatRoomCreate, ChatRoomResponse, MessageResponse, ChatReadRequest, FileUploadResponse,
+    AiChatLogResponse,
 )
+import httpx
 import ai_engine
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -873,14 +875,18 @@ async def log_event(
     get_user_logger(current_user.username).info(f"[이벤트] 동작: {event.action}")
     return {"message": "ok"}
 
-def _post_to_dict(post: Post) -> dict:
+def _post_to_dict(post: Post, db: Session) -> dict:
+    user = db.query(User).filter(User.username == post.author).first()
+    author_name = user.name if user else post.author
+
     return {
         "id": post.id,
         "category": post.category,
         "title": post.title,
         "content": post.content,
-        "author": post.author,
-        "date": post.created_at.strftime("%Y-%m-%d") if post.created_at else "",
+        "author": author_name,
+        "author_username": post.author,
+        "date": post.created_at.strftime("%Y-%m-%d %H:%M") if post.created_at else "",
         "views": post.views,
         "likes": post.likes,
         "comments": [
@@ -896,22 +902,32 @@ def _post_to_dict(post: Post) -> dict:
     }
 
 @app.get("/api/posts")
-async def get_posts(db: Session = Depends(get_db)):
-    posts = db.query(Post).order_by(Post.created_at.desc()).all()
-    logger.info(f"[게시글 목록 조회] 전체 게시글 수: {len(posts)}")
-    return [_post_to_dict(p) for p in posts]
+async def get_posts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    posts = db.query(Post).order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
+    total = db.query(Post).count()
+    logger.info(f"[게시글 목록 조회] skip: {skip}, limit: {limit}, 조회된 게시글: {len(posts)}, 전체: {total}")
+    return [_post_to_dict(p, db) for p in posts]
 
 @app.get("/api/posts/{post_id}")
-async def get_post(post_id: int, db: Session = Depends(get_db)):
+async def get_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         logger.warning(f"[게시글 조회 실패] 이유: 게시글 없음 (ID: {post_id})")
         raise HTTPException(status_code=404, detail="게시글 없음")
-    post.views += 1
-    db.commit()
-    db.refresh(post)
+
+    viewed = db.query(PostView).filter(
+        PostView.post_id == post_id,
+        PostView.user_id == current_user.id
+    ).first()
+
+    if not viewed:
+        db.add(PostView(post_id=post_id, user_id=current_user.id))
+        post.views += 1
+        db.commit()
+        db.refresh(post)
+
     logger.info(f"[게시글 조회] ID: {post_id} | 제목: {post.title} | 조회수: {post.views}")
-    return _post_to_dict(post)
+    return _post_to_dict(post, db)
 
 @app.post("/api/posts", status_code=status.HTTP_201_CREATED)
 async def create_post(
@@ -931,7 +947,33 @@ async def create_post(
     logger.info(f"[게시글 작성 완료] 작성자: {current_user.username} | 카테고리: {post.category} | 제목: {post.title}")
     user_logger = get_user_logger(current_user.username)
     user_logger.info(f"[게시글 작성] 카테고리: {post.category} | 제목: {post.title}")
-    return _post_to_dict(post)
+    return _post_to_dict(post, db)
+
+@app.put("/api/posts/{post_id}")
+async def update_post(
+    post_id: int,
+    post_data: PostUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        logger.warning(f"[게시글 수정 실패] 사용자: {current_user.username} | 이유: 게시글 없음 (ID: {post_id})")
+        raise HTTPException(status_code=404, detail="게시글 없음")
+    if post.author != current_user.username and current_user.role != "admin":
+        logger.warning(f"[게시글 수정 실패] 사용자: {current_user.username} | 이유: 권한 없음 (게시글 ID: {post_id})")
+        raise HTTPException(status_code=403, detail="수정 권한 없음")
+
+    update_data = post_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(post, key, value)
+
+    db.commit()
+    db.refresh(post)
+    logger.info(f"[게시글 수정 완료] 사용자: {current_user.username} | 게시글: {post.title}")
+    user_logger = get_user_logger(current_user.username)
+    user_logger.info(f"[게시글 수정] 제목: {post.title}")
+    return _post_to_dict(post, db)
 
 @app.delete("/api/posts/{post_id}")
 async def delete_post(
@@ -1002,7 +1044,7 @@ async def create_comment(
     }
 
 @app.post("/api/ai/chat")
-async def ai_chat(req: AiChatRequest, current_user: User = Depends(get_current_user)):
+async def ai_chat(req: AiChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     import json as _json
     global ai_processing
 
@@ -1013,8 +1055,12 @@ async def ai_chat(req: AiChatRequest, current_user: User = Depends(get_current_u
     my_event = asyncio.Event()
     await ai_queue.put(my_event)
 
+    import uuid as _uuid
+    session_id = req.session_id if req.session_id else str(_uuid.uuid4())
+
     async def event_stream():
         global ai_processing
+        response_chunks = []
         try:
             while True:
                 queue_list = list(ai_queue._queue)
@@ -1032,18 +1078,100 @@ async def ai_chat(req: AiChatRequest, current_user: User = Depends(get_current_u
 
                 await asyncio.sleep(0.5)
 
-            yield f"data: {_json.dumps({'type': 'processing'}, ensure_ascii=False)}\n\n"
+            yield f"data: {_json.dumps({'type': 'processing', 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
             history = [m.model_dump() for m in req.history] if req.history else None
             async for chunk in ai_engine.chat_stream(req.message, history):
+                if chunk.get("content"):
+                    response_chunks.append(chunk["content"])
                 yield f"data: {_json.dumps(chunk, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"[AI 채팅 오류] 사용자: {current_user.username} | 오류: {str(e)}")
             yield f"data: {_json.dumps({'content': f'오류가 발생했습니다: {str(e)}', 'done': True}, ensure_ascii=False)}\n\n"
         finally:
             ai_processing = False
+            try:
+                log = AiChatLog(
+                    session_id=session_id,
+                    user_id=current_user.id,
+                    message=req.message,
+                    response="".join(response_chunks) if response_chunks else None,
+                )
+                db.add(log)
+                db.commit()
+            except Exception:
+                db.rollback()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.get("/api/ai/chat/history")
+async def ai_chat_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from sqlalchemy import func as sqlfunc
+    rows = db.query(AiChatLog).filter(AiChatLog.user_id == current_user.id).order_by(AiChatLog.created_at.asc()).all()
+    sessions: dict = {}
+    for row in rows:
+        sid = row.session_id
+        if sid not in sessions:
+            sessions[sid] = {"session_id": sid, "title": row.message[:50], "messages": [], "updated_at": row.created_at}
+        sessions[sid]["messages"].append({"role": "user", "content": row.message})
+        if row.response:
+            sessions[sid]["messages"].append({"role": "assistant", "content": row.response})
+        if row.created_at and (sessions[sid]["updated_at"] is None or row.created_at > sessions[sid]["updated_at"]):
+            sessions[sid]["updated_at"] = row.created_at
+    result = sorted(sessions.values(), key=lambda s: s["updated_at"] or "", reverse=True)
+    for s in result:
+        s["updated_at"] = s["updated_at"].isoformat() if s["updated_at"] else None
+    return result
+
+@app.delete("/api/ai/chat/history/{session_id}")
+async def ai_chat_delete(session_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    logs = db.query(AiChatLog).filter(AiChatLog.session_id == session_id, AiChatLog.user_id == current_user.id).all()
+    if not logs:
+        raise HTTPException(status_code=404, detail="Not found")
+    for log in logs:
+        db.delete(log)
+    db.commit()
+    return {"ok": True}
+
+@app.get("/api/ai/resources")
+async def ai_resources():
+    import subprocess
+    import psutil
+
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            r = await client.get(f"{ai_engine.OLLAMA_BASE_URL}/api/tags")
+        servers = 1 if r.status_code == 200 else 0
+    except Exception:
+        servers = 0
+
+    cpu_usage = psutil.cpu_percent(interval=1.0)
+
+    gpu_list = []
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,utilization.gpu,memory.used,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().splitlines():
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) == 4:
+                    gpu_list.append({
+                        "name": parts[0],
+                        "usage": float(parts[1]),
+                        "vram_used": round(float(parts[2]) / 1024, 2),
+                        "vram_total": round(float(parts[3]) / 1024, 2),
+                    })
+    except Exception:
+        pass
+
+    return {
+        "servers": servers,
+        "cpu": {"usage": round(cpu_usage, 1)},
+        "gpu": gpu_list,
+    }
 
 @app.get("/api/ai/status")
 async def ai_status(current_user: User = Depends(get_current_user)):
